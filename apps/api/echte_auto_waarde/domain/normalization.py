@@ -164,6 +164,7 @@ _BODY_TYPE_ALIASES: dict[str, BodyType] = {
     "limousine": BodyType.SEDAN,
     "saloon": BodyType.SEDAN,
     "stationwagon": BodyType.STATIONWAGON,
+    "stationwagen": BodyType.STATIONWAGON,
     "station": BodyType.STATIONWAGON,
     "touring": BodyType.STATIONWAGON,
     "estate": BodyType.STATIONWAGON,

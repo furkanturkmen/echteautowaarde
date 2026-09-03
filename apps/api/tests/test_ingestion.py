@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from echte_auto_waarde.data_sources.base import RawListing, RawSeller, RawSnapshot, RawVehicle
-from echte_auto_waarde.data_sources.synthetic import SyntheticDataSource
+from echte_auto_waarde.data_sources.synthetic import MODEL_VARIANTS, SyntheticDataSource
 from echte_auto_waarde.models.enums import (
     BodyType,
     DataSourceType,
@@ -152,9 +152,10 @@ def test_identical_sellers_are_reused(session: Session) -> None:
 def test_seeding_the_synthetic_market_produces_a_usable_dataset(session: Session) -> None:
     result = ingest(session, SyntheticDataSource())
 
-    assert result.listings_created == 100
+    expected = sum(variant.listing_count for variant in MODEL_VARIANTS)
+    assert result.listings_created == expected
     assert result.unresolved_option_texts == 0
-    assert session.scalar(select(func.count()).select_from(Vehicle)) == 100
+    assert session.scalar(select(func.count()).select_from(Vehicle)) == expected
 
     data_source = session.scalars(select(DataSource)).one()
     assert data_source.source_type is DataSourceType.SYNTHETIC

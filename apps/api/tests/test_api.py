@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from echte_auto_waarde.data_sources.synthetic import SyntheticDataSource
+from echte_auto_waarde.data_sources.synthetic import MODEL_VARIANTS, SyntheticDataSource
 from echte_auto_waarde.db.session import get_session
 from echte_auto_waarde.main import app
 from echte_auto_waarde.models.listing import Listing
@@ -254,7 +254,8 @@ def test_listing_and_history_expose_observed_facts(client: TestClient, session: 
 def test_market_stats_describe_the_local_dataset(client: TestClient) -> None:
     payload = client.get("/market/stats").json()
 
-    assert payload["listingCount"] == 100
+    expected = sum(variant.listing_count for variant in MODEL_VARIANTS)
+    assert payload["listingCount"] == expected
     assert payload["makeCount"] == 5
     assert payload["medianPriceCents"] > 0
     assert payload["dataSources"] == ["synthetic"]

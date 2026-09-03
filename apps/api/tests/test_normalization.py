@@ -84,6 +84,10 @@ def test_fuel_normalization_separates_hybrid_from_plugin_hybrid(
         ("Touring", BodyType.STATIONWAGON),
         ("Avant", BodyType.STATIONWAGON),
         ("Estate", BodyType.STATIONWAGON),
+        ("Variant", BodyType.STATIONWAGON),
+        # The Dutch spelling, and exactly what RDW publishes.
+        ("Stationwagen", BodyType.STATIONWAGON),
+        ("stationwagon", BodyType.STATIONWAGON),
         ("Sedan", BodyType.SEDAN),
         ("Limousine", BodyType.SEDAN),
         ("Hatchback", BodyType.HATCHBACK),

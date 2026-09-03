@@ -2,15 +2,21 @@ from collections import Counter
 from datetime import UTC, datetime
 
 from echte_auto_waarde.data_sources.synthetic import (
+    MODEL_VARIANTS,
     REFERENCE_DATE,
     SyntheticDataSource,
 )
 from echte_auto_waarde.models.enums import DataSourceType, ListingStatus
 
+# Derived from the catalogue so adding a variant does not break the suite.
+EXPECTED_LISTINGS = sum(variant.listing_count for variant in MODEL_VARIANTS)
 
-def test_dataset_has_roughly_one_hundred_listings() -> None:
+
+def test_dataset_matches_the_declared_catalogue() -> None:
     listings = list(SyntheticDataSource().fetch_listings())
-    assert len(listings) == 100
+    assert len(listings) == EXPECTED_LISTINGS
+    # Big enough to form comparable groups, small enough to stay a demo set.
+    assert 100 <= len(listings) <= 200
 
 
 def test_generation_is_deterministic_for_a_given_seed() -> None:
@@ -99,3 +105,14 @@ def test_default_reference_date_keeps_the_market_recent() -> None:
     for listing in listings:
         assert (today - listing.last_seen_at).days <= 1
         assert (today - listing.first_seen_at).days <= 121
+
+
+def test_both_golf_generations_are_represented() -> None:
+    # A market with only the newest generation cannot value an older car, which
+    # is the situation this group was added to cover.
+    generations = {
+        listing.vehicle.generation
+        for listing in SyntheticDataSource().fetch_listings()
+        if listing.vehicle.model == "Golf"
+    }
+    assert {"Mk7", "Mk8"} <= generations

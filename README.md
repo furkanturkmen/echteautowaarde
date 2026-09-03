@@ -22,7 +22,7 @@ application stays fully usable with AI switched off.
 ## Status
 
 The backend is complete and covered by tests: domain model, normalization and
-option taxonomy, a deterministic synthetic market of 100 fictional listings, the
+option taxonomy, a deterministic synthetic market of 122 fictional listings, the
 comparable engine (filtering, similarity, widening, structured explanations),
 the valuation engine (robust statistics, outlier handling, transparent
 adjustments, purchase range, deal classification, confidence) and the HTTP API.
@@ -111,11 +111,16 @@ cd apps\api
 .\.venv\Scripts\python.exe -m echte_auto_waarde.seed --reset
 ```
 
-This generates 100 fictional listings across BMW 3 Serie (330e / 320i / 320d),
-Volkswagen Golf, Mercedes-Benz C-Klasse, Audi A4 and Tesla Model 3, including
+This generates 122 fictional listings across BMW 3 Serie (330e / 320i / 320d),
+Volkswagen Golf (Mk8 1.5 TSI / 2.0 TDI / GTE and Mk7 1.2 TSI / 1.4 TSI /
+1.6 TDI), Mercedes-Benz C-Klasse, Audi A4 and Tesla Model 3, including
 observation history and price reductions. It is deterministic per seed
 (`--seed 42` gives a different but equally reproducible market) and needs no
 network access.
+
+Every listing, seller and price is invented. The dataset exists to exercise the
+comparable and valuation methodology; it is not a picture of the Dutch market
+and must not be used for real purchase decisions.
 
 ### 4. Local AI (optional)
 
