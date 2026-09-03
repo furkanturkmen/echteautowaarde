@@ -63,7 +63,7 @@ export default async function StoredValuationPage({
       <div className="mt-8">
         {"error" in outcome ? (
           <div className="max-w-xl">
-            <ErrorPanel error={outcome.error} showManualLink={false} />
+            <ErrorPanel error={outcome.error} showManualLink={false} context="valuation" />
           </div>
         ) : outcome.valuation.sufficientData ? (
           <ValuationResult valuation={outcome.valuation} />

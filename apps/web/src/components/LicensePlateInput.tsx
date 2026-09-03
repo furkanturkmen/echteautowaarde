@@ -59,7 +59,7 @@ export function LicensePlateInput({
         spellCheck={false}
         autoFocus={autoFocus}
         inputMode="text"
-        className="w-full bg-transparent px-4 text-center text-2xl font-bold tracking-[0.2em] text-plate-ink uppercase placeholder:font-medium placeholder:tracking-[0.15em] placeholder:text-plate-ink/40 focus:outline-none sm:text-3xl"
+        className="w-full bg-transparent px-4 text-center font-[family-name:var(--font-plate)] text-[1.75rem] font-bold tracking-[0.12em] text-plate-ink uppercase placeholder:font-semibold placeholder:text-plate-ink/35 focus:outline-none sm:text-[2rem]"
       />
     </div>
   );

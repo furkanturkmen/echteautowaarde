@@ -1,3 +1,5 @@
+import { Info } from "lucide-react";
+
 import { AdjustmentBreakdown } from "@/components/AdjustmentBreakdown";
 import { ComparableEvidence } from "@/components/ComparableEvidence";
 import { ConfidenceIndicator } from "@/components/ConfidenceIndicator";
@@ -35,12 +37,15 @@ export function ValuationResult({ valuation }: { valuation: Valuation }) {
     <>
       <VehicleSummary vehicle={valuation.vehicle} />
 
-      {/* The five-second read: value, advice, asking price, deal, confidence. */}
+      {/* The five-second read. The three financial concepts sit side by side so
+          they can be compared at a glance; what qualifies them — the market
+          position note and the evidence strength — follows underneath rather
+          than stretching one column past the others. */}
       <section
         aria-labelledby="waarde-titel"
-        className="mt-6 rounded-eaw-lg border border-line bg-surface shadow-eaw"
+        className="mt-6 overflow-hidden rounded-eaw-lg border border-line bg-surface shadow-eaw"
       >
-        <div className="grid lg:grid-cols-[1.35fr_1fr]">
+        <div className="grid divide-y divide-line lg:grid-cols-3 lg:divide-x lg:divide-y-0">
           <div className="p-6 sm:p-8">
             <h2
               id="waarde-titel"
@@ -51,47 +56,49 @@ export function ValuationResult({ valuation }: { valuation: Valuation }) {
             <p className="mt-2 text-brand">
               <MoneyValue cents={estimate} size="hero" />
             </p>
-            <p className="mt-3 max-w-md text-sm text-muted">
-              Op basis van {valuation.comparableCount} vergelijkbare auto&apos;s schatten we de
-              marktwaarde op ongeveer {formatMoney(estimate)}.
+            <p className="mt-3 text-sm text-muted">
+              Op basis van {valuation.comparableCount} vergelijkbare auto&apos;s.
             </p>
-
-            <div className="mt-8 rounded-eaw border border-brand/15 bg-brand-soft p-5">
-              <p className="text-xs font-medium tracking-wide text-brand uppercase">
-                Prijsadvies
-              </p>
-              <p className="mt-1 text-brand">
-                <MoneyValue cents={low} size="lead" />
-                <span className="mx-2 text-brand/50">–</span>
-                <MoneyValue cents={high} size="lead" />
-              </p>
-              <p className="mt-2 text-sm text-brand/80">
-                Wat je voor deze auto zou moeten proberen te betalen.
-              </p>
-            </div>
           </div>
 
-          <div className="border-t border-line p-6 sm:p-8 lg:border-t-0 lg:border-l">
+          {/* Our recommendation carries a tint: it is the one number here that
+              is advice rather than observation. */}
+          <div className="bg-brand-soft p-6 sm:p-8">
+            <h3 className="text-xs font-medium tracking-wide text-brand uppercase">
+              Prijsadvies
+            </h3>
+            <p className="mt-2 text-brand">
+              <MoneyValue cents={low} size="lead" />
+              <span className="mx-1.5 text-brand/50">–</span>
+              <MoneyValue cents={high} size="lead" />
+            </p>
+            <p className="mt-3 text-sm text-brand/80">
+              Wat je voor deze auto zou moeten proberen te betalen.
+            </p>
+          </div>
+
+          <div className="p-6 sm:p-8">
+            <h3 className="text-xs font-medium tracking-wide text-muted uppercase">
+              Vraagprijs
+            </h3>
             {asking !== null ? (
-              <div className="pb-6">
-                <StatDisplay label="Vraagprijs">
+              <>
+                <p className="mt-2 text-ink">
                   <MoneyValue cents={asking} size="lead" />
-                </StatDisplay>
+                </p>
+
                 {deal ? (
-                  <div className="mt-4">
-                    <DealBadge classification={deal} size="lg" />
-                    <p className="mt-3 text-sm text-muted">
-                      {DEAL_LABELS[deal].explanation} Verschil met de geschatte marktwaarde:{" "}
-                      <span className="whitespace-nowrap text-ink tabular-nums">
-                        <MoneyValue cents={asking - estimate} size="sm" signed />
-                      </span>
-                      .
+                  <div className="mt-5 border-t border-line pt-4">
+                    <h4 className="text-xs font-medium tracking-wide text-muted uppercase">
+                      Marktpositie
+                    </h4>
+                    <div className="mt-2">
+                      <DealBadge classification={deal} />
+                    </div>
+                    <p className="mt-2.5 text-sm text-muted">
+                      {DEAL_LABELS[deal].explanation}
                     </p>
-                    {/* A deal label describes the asking price against the market.
-                        Without this line, "Eerlijke prijs" could be misread as
-                        "so this is the amount to pay" — which is what the
-                        prijsadvies, not the classification, answers. */}
-                    <p className="mt-3 text-sm font-medium text-ink">
+                    <p className="mt-2.5 text-sm font-medium text-ink">
                       {asking > high ? (
                         <>
                           Dat is{" "}
@@ -114,28 +121,41 @@ export function ValuationResult({ valuation }: { valuation: Valuation }) {
                     </p>
                   </div>
                 ) : null}
-              </div>
+              </>
             ) : (
-              <div className="pb-6">
-                <StatDisplay label="Vraagprijs">
-                  <span className="text-muted">Niet ingevuld</span>
-                </StatDisplay>
-                <p className="mt-2 text-sm text-muted">
-                  Vul een vraagprijs in om te zien of die eerlijk is.
+              <>
+                <p className="mt-2 text-muted">Niet ingevuld</p>
+                <p className="mt-3 text-sm text-muted">
+                  Vul een vraagprijs in om te zien hoe die zich verhoudt tot de markt.
                 </p>
-              </div>
+              </>
             )}
-
-            <div className="border-t border-line pt-6">
-              {valuation.confidenceScore !== null ? (
-                <ConfidenceIndicator
-                  score={valuation.confidenceScore}
-                  factors={valuation.confidenceFactors}
-                />
-              ) : null}
-            </div>
           </div>
         </div>
+
+        {deal ? (
+          <div className="flex gap-3 border-t border-line bg-surface-muted/60 px-6 py-4 sm:px-8">
+            <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted" strokeWidth={2} />
+            <p className="text-sm text-muted">
+              <span className="font-medium text-ink">
+                Marktpositie en koopadvies zijn niet hetzelfde.
+              </span>{" "}
+              &laquo;{DEAL_LABELS[deal].label}&raquo; beschrijft hoe de vraagprijs zich
+              verhoudt tot vergelijkbare advertenties. Het prijsadvies houdt daarnaast
+              rekening met de correcties voor déze auto.
+            </p>
+          </div>
+        ) : null}
+
+        {valuation.confidenceScore !== null ? (
+          <div className="border-t border-line px-6 py-6 sm:px-8">
+            <ConfidenceIndicator
+              score={valuation.confidenceScore}
+              factors={valuation.confidenceFactors}
+              layout="row"
+            />
+          </div>
+        ) : null}
       </section>
 
       {statistics ? (
@@ -230,9 +250,13 @@ export function ValuationResult({ valuation }: { valuation: Valuation }) {
             {WIDENING_LEVEL_LABELS[valuation.wideningLevel] ? (
               <p className="mt-2 text-muted">
                 Selectie: {WIDENING_LEVEL_LABELS[valuation.wideningLevel]}.
-                {valuation.wideningLevel > 0
-                  ? " De zoekopdracht is verbreed omdat er te weinig strikt vergelijkbare auto's waren; dat verlaagt de betrouwbaarheid."
-                  : ""}
+              </p>
+            ) : null}
+            {valuation.wideningLevel > 0 ? (
+              <p className="mt-3 rounded-eaw border border-caution/20 bg-caution-soft p-3 text-caution">
+                <span className="font-medium">Zoekgebied verruimd.</span> Er waren te weinig
+                strikt vergelijkbare auto&apos;s, daarom is de selectie opgerekt. Dat verlaagt
+                de betrouwbaarheid.
               </p>
             ) : null}
             {statistics ? (

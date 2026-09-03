@@ -156,7 +156,8 @@ export function PlateSearchForm() {
         </div>
 
         <p id={hintId} className="mt-3 text-sm text-muted">
-          Vul de vraagprijs in om te zien of die eerlijk is ten opzichte van de markt.
+          Vraagprijs invullen geeft direct een prijsadvies en een beoordeling van de
+          marktpositie.
         </p>
 
         {error ? (
@@ -193,8 +194,8 @@ export function PlateSearchForm() {
 
       {examples.length > 0 ? (
         <div className="mt-10 border-t border-line pt-6">
-          <p className="text-sm text-muted">
-            Auto&apos;s uit de lokale demomarkt om mee te proberen:
+          <p className="text-xs font-medium tracking-wide text-subtle uppercase">
+            Voorbeelden uit de lokale demomarkt
           </p>
           <ul className="mt-3 flex flex-wrap gap-2">
             {examples.map((example) => (

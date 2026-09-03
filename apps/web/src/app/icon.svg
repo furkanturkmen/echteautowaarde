@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Echte Auto Waarde favicon: value block against the market line.
+       Small sizes drop the median dot, per the brand guidance. -->
+  <rect width="32" height="32" rx="7" fill="#14213D"/>
+  <rect x="6" y="15.25" width="20" height="1.5" rx="0.75" fill="#FFFFFF" opacity="0.35"/>
+  <rect x="7.5" y="10" width="6" height="12" rx="1.75" fill="#FFFFFF"/>
+  <circle cx="21.76" cy="16" r="2.5" fill="#F7CE1B"/>
+</svg>

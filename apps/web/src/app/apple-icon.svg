@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <!-- App icon: same three shapes, more breathing room at large sizes. -->
+  <rect width="180" height="180" rx="40" fill="#14213D"/>
+  <rect x="34" y="86" width="112" height="8" rx="4" fill="#FFFFFF" opacity="0.35"/>
+  <rect x="43" y="60" width="30" height="60" rx="9" fill="#FFFFFF"/>
+  <circle cx="122.4" cy="90" r="14" fill="#F7CE1B"/>
+</svg>

@@ -41,7 +41,7 @@ export function VehicleSummary({
           {title}
         </h1>
         {vehicle.licensePlate ? (
-          <span className="inline-flex items-center rounded-eaw-sm border border-plate-ink/20 bg-plate px-2 py-0.5 text-sm font-bold tracking-wider text-plate-ink">
+          <span className="inline-flex items-center rounded-eaw-sm border border-plate-ink/20 bg-plate px-2.5 py-1 font-[family-name:var(--font-plate)] text-sm font-bold tracking-[0.08em] text-plate-ink">
             {formatPlate(vehicle.licensePlate)}
           </span>
         ) : null}

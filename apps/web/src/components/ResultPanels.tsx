@@ -37,8 +37,22 @@ export function InsufficientPanel({ valuation }: { valuation: Valuation }) {
   );
 }
 
-export function ErrorPanel({ error, showManualLink = true }: { error: ApiError; showManualLink?: boolean }) {
-  const unknownPlate = error.status === 404;
+export function ErrorPanel({
+  error,
+  showManualLink = true,
+  /**
+   * What was being looked up. A 404 means "unknown plate" on the search form
+   * but "this valuation does not exist" on a result URL, and telling someone
+   * their plate is unknown when they opened a stale link is simply wrong.
+   */
+  context = "lookup",
+}: {
+  error: ApiError;
+  showManualLink?: boolean;
+  context?: "lookup" | "valuation";
+}) {
+  const notFound = error.status === 404;
+  const unknownPlate = notFound && context === "lookup";
 
   return (
     <div role="alert" className="rounded-eaw-lg border border-line bg-surface p-6 sm:p-8">
@@ -46,11 +60,23 @@ export function ErrorPanel({ error, showManualLink = true }: { error: ApiError; 
       <h2 className="mt-4 text-lg font-semibold text-ink">
         {unknownPlate
           ? "Dit kenteken staat niet in de lokale dataset"
-          : error.isOffline
-            ? "Geen verbinding met de lokale API"
-            : "De waardering is niet gelukt"}
+          : notFound
+            ? "Deze waardering bestaat niet (meer)"
+            : error.isOffline
+              ? "Geen verbinding met de lokale API"
+              : "De waardering is niet gelukt"}
       </h2>
-      <p className="mt-3 text-muted">{error.message}</p>
+      <p className="mt-3 text-muted">
+        {notFound && !unknownPlate
+          ? "De link verwijst naar een waardering die niet in de lokale database staat. Waardeer de auto opnieuw om een nieuw resultaat te krijgen."
+          : error.message}
+      </p>
+
+      {notFound && !unknownPlate ? (
+        <div className="mt-6">
+          <ButtonLink href="/">Auto waarderen</ButtonLink>
+        </div>
+      ) : null}
 
       {unknownPlate && showManualLink ? (
         <>

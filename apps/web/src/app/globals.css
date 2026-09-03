@@ -13,6 +13,7 @@
   /* Brand */
   --eaw-brand: #14213d;
   --eaw-brand-strong: #0d1730;
+  --eaw-brand-hover: #2c4270;
   --eaw-brand-soft: #eef1f7;
 
   /* Surfaces */
@@ -43,10 +44,11 @@
   --eaw-market-track: #eceff4;
   --eaw-market-band: #d5dded;
 
-  /* Dutch license plate */
-  --eaw-plate: #f2c200;
+  /* Dutch license plate. The only element allowed to be fully yellow: the
+     brand guidance caps yellow at roughly 2% of a screen. */
+  --eaw-plate: #f7ce1b;
   --eaw-plate-ink: #14213d;
-  --eaw-plate-eu: #003399;
+  --eaw-plate-eu: #0b2a87;
 
   /* Shape */
   --eaw-radius: 0.625rem;
@@ -59,6 +61,7 @@
 @theme inline {
   --color-brand: var(--eaw-brand);
   --color-brand-strong: var(--eaw-brand-strong);
+  --color-brand-hover: var(--eaw-brand-hover);
   --color-brand-soft: var(--eaw-brand-soft);
 
   --color-background: var(--eaw-background);
@@ -94,7 +97,8 @@
   --shadow-eaw: var(--eaw-shadow);
   --shadow-eaw-lifted: var(--eaw-shadow-lifted);
 
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-plex-sans);
+  --font-plate: var(--font-plex-condensed);
 }
 
 html {
@@ -104,7 +108,7 @@ html {
 body {
   background: var(--eaw-background);
   color: var(--eaw-text);
-  font-family: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
   /* Money and mileage are compared column by column all over this product. */
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;

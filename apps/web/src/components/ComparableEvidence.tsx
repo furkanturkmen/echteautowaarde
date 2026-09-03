@@ -19,6 +19,9 @@ import { SELLER_TYPE_LABELS, describeSimilarityEntry } from "@/lib/labels";
 
 type SortKey = "similarity" | "price" | "mileage" | "year";
 
+// Enough rows to judge the market at a glance without scrolling past everything.
+const INITIAL_ROWS = 6;
+
 const SORTS: Record<SortKey, { label: string; compare: (a: Comparable, b: Comparable) => number }> =
   {
     similarity: {
@@ -78,9 +81,12 @@ function DifferenceLists({
     <div className="grid gap-6 sm:grid-cols-2">
       <div>
         <h4 className="text-xs font-medium tracking-wide text-muted uppercase">Overeenkomsten</h4>
-        <ul className="mt-2 space-y-1 text-sm">
+        <ul className="mt-2.5 space-y-1.5 text-sm">
           {comparable.reasons.map((entry, index) => (
-            <li key={`${entry.code}-${index}`} className="text-ink">
+            <li key={`${entry.code}-${index}`} className="flex gap-2.5 text-ink">
+              <span aria-hidden="true" className="mt-px w-3 shrink-0 text-positive">
+                =
+              </span>
               {describeSimilarityEntry(entry, optionLabels)}
             </li>
           ))}
@@ -91,9 +97,12 @@ function DifferenceLists({
       </div>
       <div>
         <h4 className="text-xs font-medium tracking-wide text-muted uppercase">Verschillen</h4>
-        <ul className="mt-2 space-y-1 text-sm">
+        <ul className="mt-2.5 space-y-1.5 text-sm">
           {comparable.differences.map((entry, index) => (
-            <li key={`${entry.code}-${index}`} className="text-ink">
+            <li key={`${entry.code}-${index}`} className="flex gap-2.5 text-ink">
+              <span aria-hidden="true" className="mt-px w-3 shrink-0 text-muted">
+                &ne;
+              </span>
               {describeSimilarityEntry(entry, optionLabels)}
             </li>
           ))}
@@ -115,15 +124,20 @@ export function ComparableEvidence({
 }) {
   const [sort, setSort] = useState<SortKey>("similarity");
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  // The strongest evidence first; the rest is one click away rather than a wall
+  // of rows. Every comparable stays reachable — nothing is hidden for good.
+  const [showAll, setShowAll] = useState(false);
 
   const optionLabels = useMemo(
     () => buildOptionLabels(target, comparables),
     [target, comparables],
   );
-  const sorted = useMemo(
+  const ordered = useMemo(
     () => [...comparables].sort(SORTS[sort].compare),
     [comparables, sort],
   );
+  const sorted = showAll ? ordered : ordered.slice(0, INITIAL_ROWS);
+  const hasMore = ordered.length > sorted.length;
 
   function toggle(listingId: number) {
     setExpanded((current) => {
@@ -139,6 +153,12 @@ export function ComparableEvidence({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted">
           {comparables.length} advertenties gebruikt als bewijs voor deze waardering.
+          {hasMore ? (
+            <span className="text-subtle">
+              {" "}
+              · {sorted.length} van {comparables.length} getoond
+            </span>
+          ) : null}
         </p>
         <label className="flex items-center gap-2 text-sm">
           <span className="text-muted">Sorteer</span>
@@ -337,6 +357,16 @@ export function ComparableEvidence({
           );
         })}
       </ul>
+
+      {hasMore ? (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          className="mt-4 w-full rounded-eaw border border-line-strong bg-surface px-4 py-3 text-sm font-medium text-brand transition-colors hover:bg-surface-muted"
+        >
+          Alle {comparables.length} vergelijkbare auto&apos;s tonen
+        </button>
+      ) : null}
     </div>
   );
 }
