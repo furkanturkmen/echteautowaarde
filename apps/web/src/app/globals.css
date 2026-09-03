@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+/*
+ * Provisional design tokens. The full Echte Auto Waarde design system is built
+ * in the frontend phase (see CLAUDE.md §16); these values only establish the
+ * light, calm baseline so no screen is built on Next.js defaults.
+ */
+:root {
+  --color-brand: #14213d;
+  --color-background: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
+  --color-border: #e5e7eb;
+}
+
+@theme inline {
+  --color-brand: var(--color-brand);
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-border: var(--color-border);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  /* Prices and mileage must line up wherever numbers are compared. */
+  font-variant-numeric: tabular-nums;
+}
