@@ -9,7 +9,11 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from echte_auto_waarde.domain.comparables import ComparableSelection, ScoredComparable
+from echte_auto_waarde.domain.comparables import (
+    WIDENING_LEVELS,
+    ComparableSelection,
+    ScoredComparable,
+)
 from echte_auto_waarde.domain.valuation import ValuationResult
 from echte_auto_waarde.models.listing import Listing
 from echte_auto_waarde.models.option import VehicleOption
@@ -30,6 +34,14 @@ from echte_auto_waarde.schemas.vehicle import VehicleRead
 # Keys that carry their own schema field; anything else is passed through as
 # free-form detail so new confidence factors need no schema change.
 _FACTOR_FIELDS = {"code", "impact", "score", "weight"}
+
+
+def _widening_description(level: int) -> str | None:
+    """The stored level's description, so a retrieved valuation explains its own scope."""
+    return next(
+        (description for value, description in WIDENING_LEVELS if value == level),
+        None,
+    )
 
 
 def load_listings(session: Session, listing_ids: list[int]) -> dict[int, Listing]:
@@ -122,7 +134,11 @@ def to_valuation_read(
         widening_level=result.widening_level,
         widening_description=selection.widening_description if selection else None,
         market_statistics=(
-            MarketStatisticsRead(**_statistics_fields(result)) if result.statistics else None
+            # Same serialization as a stored valuation, so creating and
+            # re-reading a valuation never report a statistic differently.
+            MarketStatisticsRead.model_validate(result.statistics.to_dict())
+            if result.statistics
+            else None
         ),
         adjustments=[
             AdjustmentRead(
@@ -136,27 +152,6 @@ def to_valuation_read(
         comparables=comparables,
         insufficient_data_reason=result.insufficient_data_reason,
     )
-
-
-def _statistics_fields(result: ValuationResult) -> dict:
-    statistics = result.statistics
-    assert statistics is not None
-    return {
-        "comparable_count": statistics.comparable_count,
-        "min_price_cents": statistics.min_price_cents,
-        "max_price_cents": statistics.max_price_cents,
-        "median_price_cents": statistics.median_price_cents,
-        "weighted_median_price_cents": statistics.weighted_median_price_cents,
-        "p25_price_cents": statistics.p25_price_cents,
-        "p75_price_cents": statistics.p75_price_cents,
-        "relative_dispersion": statistics.relative_dispersion,
-        "average_mileage_km": statistics.average_mileage_km,
-        "average_year": statistics.average_year,
-        "average_similarity": statistics.average_similarity,
-        "min_similarity": statistics.min_similarity,
-        "max_similarity": statistics.max_similarity,
-        "outliers_removed": statistics.outliers_removed,
-    }
 
 
 def to_comparable_search_read(
@@ -236,6 +231,7 @@ def stored_valuation_to_read(session: Session, valuation: Valuation) -> Valuatio
         vehicle=VehicleRead.from_vehicle(valuation.target_vehicle),
         asking_price_cents=valuation.asking_price_cents,
         estimated_market_value_cents=valuation.estimated_market_value_cents,
+        market_basis_cents=valuation.market_basis_cents,
         recommended_buy_price_low_cents=valuation.recommended_buy_price_low_cents,
         recommended_buy_price_high_cents=valuation.recommended_buy_price_high_cents,
         deal_classification=valuation.deal_classification,
@@ -252,6 +248,7 @@ def stored_valuation_to_read(session: Session, valuation: Valuation) -> Valuatio
         ],
         comparable_count=valuation.comparable_count,
         widening_level=valuation.widening_level,
+        widening_description=_widening_description(valuation.widening_level),
         market_statistics=(MarketStatisticsRead.model_validate(statistics) if statistics else None),
         adjustments=[
             AdjustmentRead(

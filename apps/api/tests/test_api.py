@@ -9,7 +9,7 @@ from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from echte_auto_waarde.data_sources.synthetic import SyntheticDataSource
@@ -259,3 +259,65 @@ def test_market_stats_describe_the_local_dataset(client: TestClient) -> None:
     assert payload["medianPriceCents"] > 0
     assert payload["dataSources"] == ["synthetic"]
     assert payload["isSynthetic"] is True
+
+
+def test_option_taxonomy_is_exposed_for_manual_entry(client: TestClient) -> None:
+    payload = client.get("/options").json()
+
+    keys = {option["key"] for option in payload}
+    assert {"panoramic_roof", "adaptive_cruise_control", "tow_bar"} <= keys
+    for option in payload:
+        assert option["labelNl"]
+        assert 0.0 < option["importance"] <= 1.0
+
+
+def test_market_examples_come_from_the_local_dataset(client: TestClient) -> None:
+    payload = client.get("/market/examples?limit=6").json()
+
+    assert 1 <= len(payload) <= 6
+    # Examples must spread across model lines rather than repeat one car.
+    lines = {(item["make"], item["model"], item["engineDescription"]) for item in payload}
+    assert len(lines) == len(payload)
+    # A short list should show several brands, not one alphabetically lucky make.
+    assert len({item["make"] for item in payload}) >= 5
+
+    for item in payload:
+        assert item["askingPriceCents"] > 0
+        assert item["licensePlate"]
+        # Every example must resolve through the plate lookup it is offered for.
+        assert client.get(f"/vehicles/plate/{item['licensePlate']}").status_code == 200
+
+
+def test_a_stored_valuation_explains_itself_fully(client: TestClient, session: Session) -> None:
+    vehicle = _bmw_330e(session)
+    created = client.post(
+        "/valuations", json={"vehicleId": vehicle.id, "askingPriceCents": 2_750_000}
+    ).json()
+
+    fetched = client.get(f"/valuations/{created['id']}").json()
+
+    # Retrieving a valuation must show the same reasoning as creating one did,
+    # otherwise a shared or refreshed result quietly loses its explanation.
+    assert fetched["marketBasisCents"] == created["marketBasisCents"]
+    assert fetched["wideningDescription"] == created["wideningDescription"]
+    assert fetched["adjustments"] == created["adjustments"]
+    assert fetched["marketStatistics"] == created["marketStatistics"]
+    assert fetched["confidenceFactors"] == created["confidenceFactors"]
+
+    total = sum(adjustment["amountCents"] for adjustment in fetched["adjustments"])
+    assert abs(fetched["estimatedMarketValueCents"] - (fetched["marketBasisCents"] + total)) < 100
+
+
+def test_reading_a_valuation_never_creates_another_one(
+    client: TestClient, session: Session
+) -> None:
+    from echte_auto_waarde.models.valuation import Valuation
+
+    vehicle = _bmw_330e(session)
+    created = client.post("/valuations", json={"vehicleId": vehicle.id}).json()
+    before = session.scalar(select(func.count()).select_from(Valuation))
+
+    for _ in range(3):
+        assert client.get(f"/valuations/{created['id']}").status_code == 200
+
+    assert session.scalar(select(func.count()).select_from(Valuation)) == before

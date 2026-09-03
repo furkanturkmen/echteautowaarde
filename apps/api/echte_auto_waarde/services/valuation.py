@@ -64,6 +64,7 @@ def store_valuation(session: Session, target: Vehicle, result: ValuationResult) 
         target_vehicle_id=target.id,
         asking_price_cents=result.asking_price_cents,
         estimated_market_value_cents=result.estimated_market_value_cents,
+        market_basis_cents=result.market_basis_cents,
         recommended_buy_price_low_cents=result.recommended_buy_price_low_cents,
         recommended_buy_price_high_cents=result.recommended_buy_price_high_cents,
         deal_classification=result.deal_classification,

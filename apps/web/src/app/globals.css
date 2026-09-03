@@ -1,33 +1,127 @@
 @import "tailwindcss";
 
 /*
- * Provisional design tokens. The full Echte Auto Waarde design system is built
- * in the frontend phase (see CLAUDE.md §16); these values only establish the
- * light, calm baseline so no screen is built on Next.js defaults.
+ * Design tokens for Echte Auto Waarde (see CLAUDE.md §16).
+ *
+ * Every colour, radius and shadow the interface uses is defined here once, so a
+ * brand refinement never means editing dozens of components. The palette is
+ * deliberately calm: a light, warm-neutral ground, white surfaces and one deep
+ * navy that carries the brand. Semantic colours exist for market position only,
+ * and are always paired with a label — never used as the sole signal.
  */
 :root {
-  --color-brand: #14213d;
-  --color-background: #f7f8fa;
-  --color-surface: #ffffff;
-  --color-text: #111827;
-  --color-text-muted: #6b7280;
-  --color-border: #e5e7eb;
+  /* Brand */
+  --eaw-brand: #14213d;
+  --eaw-brand-strong: #0d1730;
+  --eaw-brand-soft: #eef1f7;
+
+  /* Surfaces */
+  --eaw-background: #f7f8fa;
+  --eaw-surface: #ffffff;
+  --eaw-surface-muted: #f2f4f7;
+
+  /* Text */
+  --eaw-text: #111827;
+  --eaw-text-muted: #6b7280;
+  --eaw-text-subtle: #9ca3af;
+  --eaw-text-inverted: #ffffff;
+
+  /* Lines */
+  --eaw-border: #e5e7eb;
+  --eaw-border-strong: #d1d5db;
+
+  /* Market position. Restrained on purpose: this is analysis, not marketing. */
+  --eaw-positive: #15803d;
+  --eaw-positive-soft: #ecfdf3;
+  --eaw-caution: #b45309;
+  --eaw-caution-soft: #fffaeb;
+  --eaw-negative: #b42318;
+  --eaw-negative-soft: #fef3f2;
+
+  /* Market position. The band must read clearly against the track, which the
+     softest brand tint did not. */
+  --eaw-market-track: #eceff4;
+  --eaw-market-band: #d5dded;
+
+  /* Dutch license plate */
+  --eaw-plate: #f2c200;
+  --eaw-plate-ink: #14213d;
+  --eaw-plate-eu: #003399;
+
+  /* Shape */
+  --eaw-radius: 0.625rem;
+  --eaw-radius-sm: 0.375rem;
+  --eaw-radius-lg: 1rem;
+  --eaw-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.06);
+  --eaw-shadow-lifted: 0 4px 12px rgb(16 24 40 / 0.07);
 }
 
 @theme inline {
-  --color-brand: var(--color-brand);
-  --color-background: var(--color-background);
-  --color-surface: var(--color-surface);
-  --color-text: var(--color-text);
-  --color-text-muted: var(--color-text-muted);
-  --color-border: var(--color-border);
+  --color-brand: var(--eaw-brand);
+  --color-brand-strong: var(--eaw-brand-strong);
+  --color-brand-soft: var(--eaw-brand-soft);
+
+  --color-background: var(--eaw-background);
+  --color-surface: var(--eaw-surface);
+  --color-surface-muted: var(--eaw-surface-muted);
+
+  --color-ink: var(--eaw-text);
+  --color-muted: var(--eaw-text-muted);
+  --color-subtle: var(--eaw-text-subtle);
+  --color-inverted: var(--eaw-text-inverted);
+
+  --color-line: var(--eaw-border);
+  --color-line-strong: var(--eaw-border-strong);
+
+  --color-positive: var(--eaw-positive);
+  --color-positive-soft: var(--eaw-positive-soft);
+  --color-caution: var(--eaw-caution);
+  --color-caution-soft: var(--eaw-caution-soft);
+  --color-negative: var(--eaw-negative);
+  --color-negative-soft: var(--eaw-negative-soft);
+
+  --color-market-track: var(--eaw-market-track);
+  --color-market-band: var(--eaw-market-band);
+
+  --color-plate: var(--eaw-plate);
+  --color-plate-ink: var(--eaw-plate-ink);
+  --color-plate-eu: var(--eaw-plate-eu);
+
+  --radius-eaw-sm: var(--eaw-radius-sm);
+  --radius-eaw: var(--eaw-radius);
+  --radius-eaw-lg: var(--eaw-radius-lg);
+
+  --shadow-eaw: var(--eaw-shadow);
+  --shadow-eaw-lifted: var(--eaw-shadow-lifted);
+
   --font-sans: var(--font-inter);
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background: var(--color-background);
-  color: var(--color-text);
-  font-family: var(--font-sans), system-ui, sans-serif;
-  /* Prices and mileage must line up wherever numbers are compared. */
+  background: var(--eaw-background);
+  color: var(--eaw-text);
+  font-family: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Money and mileage are compared column by column all over this product. */
   font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* One consistent focus treatment, visible on every surface. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--eaw-brand);
+  outline-offset: 2px;
+  border-radius: var(--eaw-radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

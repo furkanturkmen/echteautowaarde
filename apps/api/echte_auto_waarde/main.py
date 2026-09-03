@@ -5,7 +5,14 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from echte_auto_waarde.api.routes import comparables, health, listings, valuations, vehicles
+from echte_auto_waarde.api.routes import (
+    comparables,
+    health,
+    listings,
+    options,
+    valuations,
+    vehicles,
+)
 from echte_auto_waarde.config import get_settings
 
 
@@ -33,6 +40,7 @@ def create_app() -> FastAPI:
     app.include_router(comparables.router)
     app.include_router(valuations.router)
     app.include_router(listings.router)
+    app.include_router(options.router)
     return app
 
 

@@ -27,8 +27,20 @@ comparable engine (filtering, similarity, widening, structured explanations),
 the valuation engine (robust statistics, outlier handling, transparent
 adjustments, purchase range, deal classification, confidence) and the HTTP API.
 
-Still to come: the consumer interface and the local AI explanation layer — see
-the implementation order in [`CLAUDE.md`](CLAUDE.md).
+The Dutch consumer interface is built: license-plate or manual entry, a stable
+valuation result page, the market-position view, the comparable evidence table
+with per-car Overeenkomsten/Verschillen, and the valuation build-up.
+
+Still to come: the local AI explanation layer — see the implementation order in
+[`CLAUDE.md`](CLAUDE.md).
+
+### Screens
+
+```
+/                        kenteken -> vraagprijs -> waardering
+/handmatig               manual vehicle entry
+/waardebepaling/{id}     stored valuation with all of its evidence
+```
 
 ### API
 
@@ -43,6 +55,8 @@ GET  /valuations/{id}             a stored valuation and the evidence behind it
 GET  /listings/{id}               one market listing
 GET  /listings/{id}/history       observed price history of a listing
 GET  /market/stats                what the local dataset contains
+GET  /market/examples             real vehicles from the local dataset to start from
+GET  /options                     the canonical option taxonomy
 ```
 
 ## Architecture

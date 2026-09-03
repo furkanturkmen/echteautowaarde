@@ -181,3 +181,21 @@ class MarketStatsRead(ApiModel):
     average_mileage_km: int | None = None
     data_sources: list[str] = Field(default_factory=list)
     is_synthetic: bool = True
+
+
+class ExampleVehicleRead(ApiModel):
+    """A vehicle from the local dataset, offered as a starting point.
+
+    Used by the interface so someone can try the product without inventing a
+    license plate. Every field comes from a real seeded listing.
+    """
+
+    vehicle_id: int
+    license_plate: str | None = None
+    make: str
+    model: str
+    year: int | None = None
+    mileage_km: int | None = None
+    trim: str | None = None
+    engine_description: str | None = None
+    asking_price_cents: int

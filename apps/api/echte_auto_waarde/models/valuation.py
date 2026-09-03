@@ -37,6 +37,10 @@ class Valuation(Base, TimestampMixin):
     asking_price_cents: Mapped[int | None] = mapped_column(Integer)
 
     estimated_market_value_cents: Mapped[int] = mapped_column(Integer)
+    # The weighted market price before adjustments. Stored because without it a
+    # retrieved valuation cannot show how it reached its estimate. Nullable only
+    # because valuations created before this column existed do not have one.
+    market_basis_cents: Mapped[int | None] = mapped_column(Integer)
     recommended_buy_price_low_cents: Mapped[int] = mapped_column(Integer)
     recommended_buy_price_high_cents: Mapped[int] = mapped_column(Integer)
 
