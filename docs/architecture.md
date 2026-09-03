@@ -1,0 +1,73 @@
+# Architecture
+
+## Shape
+
+A modular monolith split into two locally running applications:
+
+```
+apps/web  (Next.js)  ──HTTP──▶  apps/api  (FastAPI)  ──▶  SQLite (data/automotive.db)
+                                     │
+                                     └──▶  Ollama (optional, local)
+```
+
+No cloud services, no message broker, no cache server, no background worker
+infrastructure. Everything a developer needs runs on one machine.
+
+## Backend layout (`apps/api/echte_auto_waarde/`)
+
+| Package | Responsibility |
+|---|---|
+| `config.py` | Settings with local-first defaults, `EAW_` env prefix |
+| `db/` | Declarative base, engine, session dependency, SQLite pragmas |
+| `models/` | SQLAlchemy ORM models (persistence only) |
+| `schemas/` | Pydantic request/response models (API contract) |
+| `domain/` | Normalization, comparable engine, valuation, confidence — pure logic |
+| `services/` | Orchestration between persistence, domain and adapters |
+| `data_sources/` | `DataSourceAdapter` implementations (synthetic, CSV, RDW, …) |
+| `api/routes/` | Thin FastAPI routers; no business rules |
+
+The domain layer holds the valuable logic and is deliberately free of FastAPI
+and database concerns so it can be unit-tested directly.
+
+## Frontend layout (`apps/web/src/`)
+
+| Path | Responsibility |
+|---|---|
+| `app/` | App Router pages and layouts |
+| `lib/` | API client and formatting helpers |
+
+The frontend never reproduces valuation logic. It renders structured backend
+results and formats them for a Dutch consumer. Route structure keeps future
+public SEO pages (`/autowaarde`, `/merken/bmw/3-serie`, …) possible without a
+rewrite, and the canonical base URL stays configuration rather than a hardcoded
+domain.
+
+## Boundaries
+
+| Backend owns | Frontend owns |
+|---|---|
+| Normalization, data access, comparable search, similarity, valuation, adjustments, confidence, deal classification, AI context | Input, rendering, interaction, formatting, visualization |
+
+## Database
+
+SQLite via SQLAlchemy 2.0, migrated with Alembic (`render_as_batch=True` so
+column changes work on SQLite). Models avoid SQLite-only constructs, so moving
+to another relational database later stays possible without a rewrite. The
+database URL comes from application settings, including inside Alembic, so there
+is one source of truth.
+
+Money is stored as integer cents in EUR. Timestamps are stored in UTC and
+formatted for Dutch display in the frontend.
+
+## AI
+
+Ollama sits behind an `AIProvider` abstraction and is optional by design. If it
+is unavailable, `/health` reports the AI component as unavailable while overall
+status stays `ok`, and valuation, comparison and market statistics continue to
+work.
+
+## What is deliberately absent
+
+Microservices, Kubernetes, Redis, Celery, hosted search, vector databases,
+authentication, payments, analytics, hosted monitoring and CI pipelines. Tests,
+linting, type checks and builds all run locally.
