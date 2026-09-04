@@ -37,8 +37,14 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from echte_auto_waarde.data_sources.csv_import import CsvContractError, CsvImportDataSource
-from echte_auto_waarde.models.enums import ImportMode, ImportRunStatus, ListingStatus
+from echte_auto_waarde.data_sources.base import MarketImportSource
+from echte_auto_waarde.data_sources.csv_import import CsvContractError
+from echte_auto_waarde.models.enums import (
+    DataSourceType,
+    ImportMode,
+    ImportRunStatus,
+    ListingStatus,
+)
 from echte_auto_waarde.models.import_run import ImportRun
 from echte_auto_waarde.models.listing import DataSource, Listing
 from echte_auto_waarde.services.ingestion import ensure_data_source, ingest
@@ -69,7 +75,7 @@ class ImportReport:
 
 def import_market_file(
     session: Session,
-    source: CsvImportDataSource,
+    source: MarketImportSource,
     scope: str,
     mode: ImportMode = ImportMode.INCREMENTAL,
     dry_run: bool = False,
@@ -100,6 +106,16 @@ def import_market_file(
 
     report.rows_read = len(listings)
 
+    # A dealer-page sample is deliberately partial, so absence from it means
+    # nothing at all. Only a source that can claim completeness may retire
+    # listings, and a public dealer pilot never can.
+    if mode is ImportMode.FULL_SNAPSHOT and source.source_type is DataSourceType.DEALER_SITE:
+        report.validation_errors = [
+            "a dealer-site sample is partial by design and can never be a full "
+            "snapshot; use INCREMENTAL"
+        ]
+        return report
+
     # 2. The scope invariant is checked before anything is created, including
     #    the data source itself: a rejected import must leave no trace.
     conflicts = _scope_conflicts(
@@ -129,7 +145,7 @@ def import_market_file(
         mode=mode,
         status=ImportRunStatus.STARTED,
         started_at=datetime.now(UTC),
-        source_file=str(source.path),
+        source_file=source.origin,
     )
     session.add(run)
     session.flush()

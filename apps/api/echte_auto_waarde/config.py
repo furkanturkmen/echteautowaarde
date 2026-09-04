@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     # before it emits a token; 60 seconds expires during that cold start.
     ollama_timeout_seconds: float = 180.0
 
+    # The public dealer pilot. One request at a time, with a delay; the
+    # listing cap lives in code because it is the point of the pilot.
+    dealer_user_agent: str = "EchteAutoWaardePilot/0.1 (local development pilot)"
+    dealer_request_delay_seconds: float = 2.0
+    dealer_timeout_seconds: float = 20.0
+
     # Optional plate enrichment from the Dutch open vehicle register. Off by
     # default: this is the only outbound call the application can make, and a
     # local-first product does not reach the network unless it is asked to.

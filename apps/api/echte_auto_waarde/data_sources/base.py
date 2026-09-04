@@ -114,3 +114,21 @@ class VehicleSpecificationSource(Protocol):
 
 class VehicleSourceUnavailable(RuntimeError):
     """The specification source could not be reached or gave nothing usable."""
+
+
+class MarketImportSource(Protocol):
+    """A source of listings that can be imported through the market pipeline.
+
+    `origin` is where the data came from — a file path, an inventory URL — and
+    is recorded on the import run so a run can be traced back.
+    """
+
+    key: str
+    source_type: DataSourceType
+    name: str
+    quality: float
+
+    @property
+    def origin(self) -> str: ...
+
+    def fetch_listings(self) -> Iterable[RawListing]: ...

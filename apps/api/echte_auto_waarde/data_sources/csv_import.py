@@ -104,6 +104,10 @@ class CsvImportDataSource:
     quality: float = 0.7
     source_type: DataSourceType = DataSourceType.CSV_IMPORT
 
+    @property
+    def origin(self) -> str:
+        return str(self.path)
+
     def fetch_listings(self) -> Iterable[RawListing]:
         """Every listing in the file, or nothing at all.
 

@@ -20,7 +20,12 @@ from echte_auto_waarde.models.enums import DataSourceType
 # Everything that is not the invented demo market. A vehicle entered by hand or
 # enriched from the register is real; so is an imported listing.
 REAL_SOURCE_TYPES = frozenset(
-    {DataSourceType.CSV_IMPORT, DataSourceType.RDW, DataSourceType.MANUAL}
+    {
+        DataSourceType.CSV_IMPORT,
+        DataSourceType.DEALER_SITE,
+        DataSourceType.RDW,
+        DataSourceType.MANUAL,
+    }
 )
 DEMO_SOURCE_TYPES = frozenset({DataSourceType.SYNTHETIC})
 
@@ -63,6 +68,9 @@ IMPORTED_DISCLAIMER = (
     "Deze waardering is gebaseerd op geïmporteerde marktgegevens: waargenomen "
     "vraagprijzen, geen verkoopprijzen."
 )
+DEALER_DISCLAIMER = (
+    "Bron: openbare dealeradvertenties. Dit zijn waargenomen vraagprijzen, geen verkoopprijzen."
+)
 MIXED_DISCLAIMER = (
     "Deze waardering gebruikt zowel geïmporteerde marktgegevens als "
     "demogegevens en is niet geschikt voor echte aankoopbeslissingen."
@@ -82,4 +90,8 @@ def describe_evidence(source_types: set[DataSourceType]) -> str:
         return MIXED_DISCLAIMER
     if has_demo:
         return SYNTHETIC_DISCLAIMER
+    # Naming the kind of source, without implying a partnership or an official
+    # feed: these are advertisements a dealer published publicly.
+    if source_types == {DataSourceType.DEALER_SITE}:
+        return DEALER_DISCLAIMER
     return IMPORTED_DISCLAIMER

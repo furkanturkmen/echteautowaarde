@@ -68,6 +68,8 @@ class ListingStatus(StrEnum):
 class DataSourceType(StrEnum):
     SYNTHETIC = "SYNTHETIC"
     CSV_IMPORT = "CSV_IMPORT"
+    # Observations read from a dealer's own public inventory page.
+    DEALER_SITE = "DEALER_SITE"
     RDW = "RDW"
     MANUAL = "MANUAL"
 

@@ -285,6 +285,10 @@ CLAUDE.md    Authoritative project specification
 
 - Market data is synthetic; the valuation validates the methodology, not real
   Dutch market prices.
+- A capped pilot reads a few listings from two dealers' own public inventory
+  pages (robots-checked, 20 per run, facts only, no contact details). It is a
+  development pilot, not a partnership and not risk-free; recurring collection
+  belongs in a permission or feed arrangement.
 - No marketplace data is collected. Commercial marketplaces are not scraped —
   their terms forbid it, AutoScout24's robots.txt refuses this class of agent
   outright, and CJEU C-202/12 concerned these exact Dutch car sites. Real data

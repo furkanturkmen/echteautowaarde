@@ -276,6 +276,74 @@ Every import writes an `ImportRun`: source, scope, mode, status
 updated and removed. It makes imports auditable and it is what makes the removal
 rule safe.
 
+## Dealer-site pilot — two dealers, deliberately tiny (implemented)
+
+A capped pilot that reads a handful of listings from two dealers' **own public
+inventory pages**, so the valuation methodology can be exercised against real
+asking prices at all.
+
+| | |
+|---|---|
+| Sources | `inzoeven.nl`, `autoxl.nl` — nothing else, and a third is a deliberate act with its own robots and terms review |
+| Access | `python -m echte_auto_waarde.collect_dealer --source inzoeven` |
+| Cap | 20 listings per source per run, hard maximum 25, enforced in code |
+| Manners | one request at a time, ≥2s apart, honest user agent, robots.txt obeyed, one page read per source |
+| Lifecycle | `INCREMENTAL` only, enforced — a dealer source cannot run as a full snapshot |
+
+### robots.txt, checked before anything is read
+
+Both sites permit the inventory path for all agents, and neither names AI
+crawlers:
+
+```
+inzoeven.nl   User-Agent: *  Allow: /        (plus a sitemap)
+autoxl.nl     User-agent: *  Disallow:       (empty = nothing disallowed)
+```
+
+The check runs before collection, once per site per run, and **fails closed**: a
+disallow stops that source. A missing robots.txt is recorded as "no prohibition
+found", never as permission.
+
+### What is collected, and what is refused
+
+Facts a valuation needs: make, model, variant, year, mileage, observed asking
+price, fuel, transmission, the canonical URL, a stable dealer id, and the
+observation moment.
+
+Deliberately **not** collected: photographs, descriptions, marketing copy,
+reviews, salesperson names, telephone numbers, email addresses, financing-lead
+data. Both inventory pages carry contact details; none of it is stored. Variant
+subtitles are stripped of sales phrasing — "6 maanden garantie" is not a trim
+level — and capped in length. This is market evidence, not a copy of a website.
+
+The collector will not log in, solve a challenge, rotate an identity or proxy,
+disguise its user agent, use hidden or app endpoints, or run requests in
+parallel. A block, a challenge or a robots disallow stops that source; there is
+no bypass path in the code, by design.
+
+One trap worth naming: AutoXL shows a monthly lease figure beside the purchase
+price. Only the purchase price is an asking price, and a test enforces that.
+
+### Identity and lifecycle
+
+The dealer's own numeric id from the canonical URL is the external reference,
+falling back to the canonical URL itself. Never the price, the mileage or a row
+position.
+
+Because the sample is partial by design, **absence from it means nothing**.
+Collection is `INCREMENTAL` and the import service rejects a `FULL_SNAPSHOT` for
+a dealer source outright, so nothing is ever marked `REMOVED` and no sale is
+ever inferred. Asking prices are observations, not sale prices.
+
+### What this is not
+
+Not a partnership, not an endorsement, not official API access, and not
+risk-free. robots.txt permitting a request is not a licence to reuse the data: a
+collection of listings can attract database rights, terms can change, and a
+dealer may simply object. This is a small development pilot. **Recurring or
+larger collection belongs in a permission, feed or API arrangement** — a dealer
+feed by agreement, a licensed provider, or an official partnership.
+
 ## Marketplace data — not in the MVP
 
 Commercial marketplaces (Marktplaats, AutoScout24, Gaspedaal, AutoTrack, dealer
