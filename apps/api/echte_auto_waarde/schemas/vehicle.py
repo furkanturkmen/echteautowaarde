@@ -98,3 +98,57 @@ class ManualVehicleCreate(ApiModel):
     power_hp: int | None = Field(default=None, ge=0, le=2_000)
     license_plate: str | None = Field(default=None, max_length=16)
     option_texts: list[str] = Field(default_factory=list, max_length=60)
+
+
+class VehicleDraftRead(ApiModel):
+    """Specifications for a plate that is not stored yet.
+
+    A draft, not a vehicle: no id, because nothing was created. The user
+    completes what the register cannot know and submits it as a manual vehicle.
+    """
+
+    license_plate: str | None = None
+    make: str | None = None
+    model: str | None = None
+    year: int | None = None
+    first_registration_date: date | None = None
+    body_type: str | None = None
+    fuel_type: str | None = None
+    engine_displacement_cc: int | None = None
+    power_kw: int | None = None
+    power_hp: int | None = None
+    doors: int | None = None
+    seats: int | None = None
+    color: str | None = None
+    catalog_price_cents: int | None = None
+
+
+class PlateLookupRead(ApiModel):
+    """The outcome of a plate lookup.
+
+    Always HTTP 200: an unknown plate, an unreachable register and a plate that
+    is not a passenger car are ordinary outcomes of asking a question, and each
+    leaves the manual route open.
+    """
+
+    status: str = Field(
+        description=(
+            "LOCAL (known locally, no external call), ENRICHED (specifications "
+            "came from the open vehicle register), NOT_FOUND (no passenger car "
+            "for this plate), or UNAVAILABLE (enrichment off, unreachable, slow "
+            "or unusable)."
+        )
+    )
+    plate: str | None = None
+    vehicle: VehicleRead | None = None
+    draft: VehicleDraftRead | None = None
+    missing_fields: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Fields a valuation needs that are still empty. The register "
+            "publishes no mileage, trim or transmission, so these are completed "
+            "by the user rather than estimated."
+        ),
+    )
+    enriched_fields: list[str] = Field(default_factory=list)
+    message: str

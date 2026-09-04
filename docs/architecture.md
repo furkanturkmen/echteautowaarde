@@ -23,7 +23,7 @@ infrastructure. Everything a developer needs runs on one machine.
 | `schemas/` | Pydantic request/response models (API contract) |
 | `domain/` | Normalization, comparable engine, valuation, confidence — pure logic |
 | `services/` | Orchestration between persistence, domain and adapters |
-| `data_sources/` | `DataSourceAdapter` implementations (synthetic, CSV, RDW, …) |
+| `data_sources/` | `DataSourceAdapter` (market listings) and `VehicleSpecificationSource` (plate enrichment) implementations |
 | `ai/` | Provider abstraction, Ollama client, prompt, grounding check |
 | `api/routes/` | Thin FastAPI routers; no business rules |
 
@@ -72,6 +72,14 @@ loads that valuation and builds the structured context itself, so client input
 cannot become AI context, and every euro amount in an answer is verified against
 the valuation before it reaches the interface. See
 [`local-ai.md`](local-ai.md).
+
+## Network
+
+One outbound call exists in the whole application: a plate lookup may ask the
+Dutch open vehicle register for specifications. It is behind
+`VehicleSpecificationSource`, has an explicit timeout, and every failure
+degrades to the manual route. Everything else — comparables, valuation,
+confidence, the local AI — runs without a network. Ollama is local.
 
 ## What is deliberately absent
 

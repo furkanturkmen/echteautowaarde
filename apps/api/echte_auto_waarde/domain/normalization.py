@@ -196,6 +196,12 @@ _FUEL_TYPE_ALIASES: dict[str, FuelType] = {
     "electric": FuelType.ELECTRIC,
     "ev": FuelType.ELECTRIC,
     "lpg": FuelType.LPG,
+    # Wording used by the Dutch vehicle register.
+    "elektriciteit": FuelType.ELECTRIC,
+    "waterstof": FuelType.ELECTRIC,
+    "cng": FuelType.LPG,
+    "lng": FuelType.LPG,
+    "aardgas": FuelType.LPG,
 }
 
 _TRANSMISSION_ALIASES: dict[str, Transmission] = {

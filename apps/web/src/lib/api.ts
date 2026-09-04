@@ -289,3 +289,36 @@ export function askAboutValuation(valuationId: number, message: string): Promise
 export function fetchAiSuggestions(valuationId: number): Promise<AiSuggestions> {
   return request<AiSuggestions>(`/ai/valuations/${valuationId}/suggestions`);
 }
+
+/** What a plate lookup found, and what the user still has to supply. */
+export interface PlateLookup {
+  status: "LOCAL" | "ENRICHED" | "NOT_FOUND" | "UNAVAILABLE";
+  plate: string | null;
+  vehicle: Vehicle | null;
+  draft: PlateDraft | null;
+  missingFields: string[];
+  enrichedFields: string[];
+  message: string;
+}
+
+/** Specifications for a plate that is not stored yet. No id: nothing was created. */
+export interface PlateDraft {
+  licensePlate: string | null;
+  make: string | null;
+  model: string | null;
+  year: number | null;
+  firstRegistrationDate: string | null;
+  bodyType: string | null;
+  fuelType: string | null;
+  engineDisplacementCc: number | null;
+  powerKw: number | null;
+  powerHp: number | null;
+  doors: number | null;
+  seats: number | null;
+  color: string | null;
+  catalogPriceCents: number | null;
+}
+
+export function lookupPlate(plate: string): Promise<PlateLookup> {
+  return request<PlateLookup>(`/vehicles/plate/${encodeURIComponent(plate)}/lookup`);
+}

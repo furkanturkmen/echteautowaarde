@@ -62,16 +62,132 @@ they are not a claim about what any car is worth.
 | Access | Local file, validated on import — imported CSV is never trusted blindly |
 | Limitations | Quality is entirely the responsibility of whoever prepared the file |
 
-## RdwDataSource — optional, later
+## RdwVehicleSource — plate enrichment (implemented)
+
+Dutch vehicle **specification** enrichment from the RDW open vehicle register.
 
 | | |
 |---|---|
-| Purpose | Dutch vehicle **specification** enrichment: plate lookup, make, trade name, registration, fuel, technical attributes, catalog price |
-| Cost | €0 (RDW open data) |
-| Terms | Public open data; to be reviewed before enabling |
-| Access | Public HTTP endpoints, optional and off by default (`EAW_RDW_ENABLED`) |
-| Refresh | On demand per lookup |
-| Limitations | **Never a source of used-car asking prices.** The application must stay fully usable when RDW is unreachable |
+| Purpose | Describe the car behind a plate: make, trade name, body, first registration, fuel, power, displacement, doors, seats, colour, catalogue price |
+| Cost | €0. The publisher charges nothing for open data |
+| Authentication | **None.** No account, no key, no payment details. A Socrata app token is optional and free; without one, requests are throttled from a shared pool per IP address |
+| Terms | CC0, commercial reuse permitted, served on a fair-use basis. Two conditions shape the product: reuse may **not** state that the data comes from the publisher, and their logo and house style may not be used — so the interface says "het kentekenregister" and carries no third-party branding |
+| Access | `GET opendata.rdw.nl/resource/{dataset}.json?kenteken=…` over plain HTTP with an explicit timeout (`EAW_RDW_TIMEOUT_SECONDS`, default 6s) |
+| Default | **Off** (`EAW_RDW_ENABLED=false`). The switch lives in one place, the source factory: when enrichment is off no source exists, so the lookup cannot reach the network at all |
+| Datasets | `m9d7-ebf2` registration · `8ys7-d773` fuel and net maximum power · `vezc-m2t6` European body description |
+| Refresh | On demand, and only when something is missing. A stored vehicle whose specifications are complete costs no request |
+| Limitations | **Not a market source.** See below |
+
+### What it is not
+
+The register describes vehicles; it knows nothing about markets. It publishes no
+asking prices, no listings, no market values and no mileage, so it can never
+feed the comparable engine or the valuation. Structurally it is not even a
+`DataSourceAdapter`: it implements `VehicleSpecificationSource`, which has no
+`fetch_listings`, so an enrichment source cannot quietly become a price source.
+
+The one price it does publish is the **catalogue price when the car was new** —
+a registration fact, not a current value, and treated as such.
+
+### Fields mapped, and fields deliberately not
+
+| Mapped | From |
+|---|---|
+| make, model | `merk`, `handelsbenaming` |
+| body type | `inrichting`, falling back to the European body description |
+| year, first registration | `datum_eerste_toelating` (both the ISO and the `YYYYMMDD` form) |
+| fuel | `brandstof_omschrijving` across all fuel rows |
+| power (kW and hp) | `nettomaximumvermogen`, the strongest row |
+| displacement, doors, seats, colour | `cilinderinhoud`, `aantal_deuren`, `aantal_zitplaatsen`, `eerste_kleur` |
+| catalogue price | `catalogusprijs`, whole euros converted to cents |
+
+**Not mapped, because the register does not publish them:** mileage, trim,
+transmission, drivetrain, options, engine name, and any market price. `uitvoering`
+looks promising and is not a trim — it is a type-approval code such as
+`FD7FD7CW001N7MJON1VL00VR2`. A missing field stays missing and is asked of the
+user; nothing is inferred to skip that step.
+
+Only passenger cars are accepted. `BB-100-B` is a real plate and a concrete
+mixer; it is reported like an unknown plate, and the manual route stays open.
+
+### Hybrids
+
+One fuel row is passed through as published. Several rows mean a hybrid, and the
+difference between a plain and a plug-in hybrid is only drawn when the register
+actually reports external charging — never guessed from the presence of an
+electric motor. When it cannot be established, the car is a hybrid, not a
+plug-in.
+
+### The lookup flow
+
+```
+plate → normalize → local dataset → (gap? and enabled?) → register
+     → normalize the response → fill gaps only → report what is still missing
+```
+
+Local first: a plate already known is answered from the database. Only when
+something is missing, and enrichment is switched on, is the register asked.
+
+**Precedence is one rule: fill gaps only, never overwrite.**
+
+- A value already on the vehicle wins, whoever entered it. What the user typed
+  is what the user meant, and the register knows nothing about an individual
+  car's condition, equipment or history.
+- An absent register value never erases a stored one, so a lookup can only add
+  information.
+- Trim, options and mileage are never touched — the register does not publish
+  them, so there is nothing authoritative to overwrite them with.
+- The unknown members of the domain enums count as gaps, because they mean "we
+  were never told".
+
+A lookup does not create a vehicle. It is a question, not a decision: the
+vehicle is created when the user submits the completed form, so browsing plates
+leaves no half-finished rows behind. A stored vehicle *is* the cache — the
+specifications it already has are never fetched again.
+
+### Demonstration data never answers for a real plate
+
+The synthetic market invents plausible Dutch plates, and plausible plates
+collide with real ones: the seed's `BB-100-B` is a fictional BMW, while the real
+`BB-100-B` is a Volvo concrete mixer. Handing a consumer the fiction would be
+exactly the kind of fabricated completeness this product refuses.
+
+**The rule.** A vehicle is demonstration data when it has listings and every one
+of them comes from a `SYNTHETIC` source. A vehicle with no listings was entered
+by hand or built from a lookup, so it is real to whoever entered it. Wherever a
+plate is treated as a claim about a real vehicle — `GET /vehicles/plate/{plate}`,
+the lookup endpoint, and a valuation requested by plate — demonstration vehicles
+are invisible:
+
+- enrichment on: the collision is passed over and the register is asked, so the
+  real vehicle wins;
+- enrichment off or unreachable: the answer is that the plate could not be
+  looked up, never the fictional car;
+- either way the manual route stays open.
+
+Genuinely stored vehicles are unaffected: local-first still answers first, and
+gap-filling still works on them.
+
+**The demo cars remain fully usable**, through the explicit route they always
+had: `/market/examples` returns a `vehicleId`, the interface offers those cars
+as examples, and choosing one values it by id. Typing that same plate by hand is
+a different act and gets the real-identity answer.
+
+### Failure is a normal outcome
+
+Every lookup answers HTTP 200 with a status the interface acts on: `LOCAL`,
+`ENRICHED`, `NOT_FOUND` or `UNAVAILABLE`. Enrichment switched off, no network, a
+timeout, an unknown plate, a lorry, a malformed body, an HTTP error, a failing
+detail dataset — each degrades, and the manual route stays open in all of them.
+A failing detail dataset degrades to less data rather than to none: the
+registration record alone is already useful.
+
+### Internet
+
+This is the only outbound call the application makes, and only while looking up
+a plate. Everything else — stored vehicles, the synthetic market, manual entry,
+comparables, valuation, confidence, the local AI — works offline. Set
+`EAW_RDW_ENABLED=false` and the application never contacts anything at all.
 
 ## Marketplace data — not in the MVP
 

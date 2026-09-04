@@ -24,7 +24,10 @@ def resolve_target_vehicle(session: Session, request: ValuationRequest) -> Vehic
         return vehicle
 
     if request.license_plate:
-        vehicle = vehicle_service.find_by_license_plate(session, request.license_plate)
+        # A typed plate is a claim about a real vehicle, so demonstration data
+        # cannot answer it: the synthetic market invents plates, and invented
+        # plates collide with real ones. Demo cars are chosen by id instead.
+        vehicle = vehicle_service.find_real_by_license_plate(session, request.license_plate)
         if vehicle is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

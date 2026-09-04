@@ -63,14 +63,31 @@ def test_unknown_vehicle_returns_404(client: TestClient) -> None:
     assert client.get("/vehicles/999999").status_code == 404
 
 
-def test_lookup_by_license_plate(client: TestClient, session: Session) -> None:
-    vehicle = _bmw_330e(session)
-    # Plates are normalized, so separators and case must not matter.
-    plate = vehicle.license_plate
-    formatted = f"{plate[:2]}-{plate[2:5]}-{plate[5:]}".lower()
+def test_lookup_by_license_plate(client: TestClient) -> None:
+    """A plate identifies a real vehicle, and normalization must not matter."""
+    created = client.post(
+        "/vehicles/manual",
+        json={"make": "Volkswagen", "model": "Golf", "licensePlate": "XF100F"},
+    ).json()
 
-    payload = client.get(f"/vehicles/plate/{formatted}").json()
-    assert payload["id"] == vehicle.id
+    payload = client.get("/vehicles/plate/xf-100-f").json()
+    assert payload["id"] == created["id"]
+
+
+def test_a_demo_vehicle_does_not_answer_for_its_plate(client: TestClient, session: Session) -> None:
+    """Synthetic plates are invented, and invented plates collide with real ones.
+
+    The seed's BB-100-B is a fictional BMW; the same plate belongs to a real
+    lorry. Demo cars are offered by id, never as an answer to a typed plate.
+    """
+    vehicle = _bmw_330e(session)
+
+    response = client.get(f"/vehicles/plate/{vehicle.license_plate}")
+
+    assert response.status_code == 404
+    assert "manually" in response.json()["detail"]
+    # Still perfectly reachable as what it is: an example, chosen by id.
+    assert client.get(f"/vehicles/{vehicle.id}").status_code == 200
 
 
 def test_unknown_plate_tells_the_user_what_to_do(client: TestClient) -> None:
@@ -285,8 +302,10 @@ def test_market_examples_come_from_the_local_dataset(client: TestClient) -> None
     for item in payload:
         assert item["askingPriceCents"] > 0
         assert item["licensePlate"]
-        # Every example must resolve through the plate lookup it is offered for.
-        assert client.get(f"/vehicles/plate/{item['licensePlate']}").status_code == 200
+        # Examples are demonstration data, so they are offered by id: their
+        # plates are invented and must not answer for a real vehicle.
+        assert client.get(f"/vehicles/{item['vehicleId']}").status_code == 200
+        assert client.get(f"/vehicles/plate/{item['licensePlate']}").status_code == 404
 
 
 def test_a_stored_valuation_explains_itself_fully(client: TestClient, session: Session) -> None:

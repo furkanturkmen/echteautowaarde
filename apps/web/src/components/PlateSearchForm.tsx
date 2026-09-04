@@ -14,8 +14,10 @@ import {
   type Valuation,
   createValuation,
   fetchExamples,
+  lookupPlate,
 } from "@/lib/api";
 import { formatMoney, formatPlate, normalizePlate, parseEuroInput } from "@/lib/format";
+import { storePrefill } from "@/lib/prefill";
 
 /**
  * The entry point: kenteken, optional vraagprijs, one primary action.
@@ -46,6 +48,11 @@ export function PlateSearchForm() {
   const [apiError, setApiError] = useState<ApiError | null>(null);
   const [insufficient, setInsufficient] = useState<Valuation | null>(null);
   const [examples, setExamples] = useState<ExampleVehicle[]>([]);
+  // Set when one of the example cars was chosen. The examples are demonstration
+  // data with invented plates, so they are valued by id: a typed plate is a
+  // claim about a real vehicle and must never be answered with a fiction.
+  // Editing the plate clears this, because then it is no longer that choice.
+  const [demoVehicleId, setDemoVehicleId] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -87,7 +94,9 @@ export function PlateSearchForm() {
 
     try {
       const valuation = await createValuation({
-        licensePlate: normalized,
+        ...(demoVehicleId !== null
+          ? { vehicleId: demoVehicleId }
+          : { licensePlate: normalized }),
         ...(askingPriceCents !== null ? { askingPriceCents } : {}),
       });
 
@@ -101,12 +110,43 @@ export function PlateSearchForm() {
       setInsufficient(valuation);
       setSubmitting(false);
     } catch (caught) {
+      // A plate we do not know locally is worth one more question: the open
+      // vehicle register may know the car even though we have never seen it.
+      if (caught instanceof ApiError && caught.status === 404) {
+        const handled = await continueWithLookup(normalized, price);
+        if (handled) return;
+      }
+
       setSubmitting(false);
       setApiError(
         caught instanceof ApiError
           ? caught
           : new ApiError("Er ging iets mis bij het bepalen van de waarde.", 500),
       );
+    }
+  }
+
+  /**
+   * Look the plate up and, when the register knows it, continue on the manual
+   * form with what it told us. Returns whether the outcome was handled here.
+   *
+   * A failed lookup is not an error worth showing: the unknown-plate message
+   * the user already gets says exactly what to do next.
+   */
+  async function continueWithLookup(normalized: string, askingPrice: string): Promise<boolean> {
+    try {
+      const lookup = await lookupPlate(normalized);
+      if (lookup.status !== "ENRICHED" || !lookup.draft) return false;
+
+      storePrefill({
+        draft: lookup.draft,
+        missingFields: lookup.missingFields,
+        askingPrice,
+      });
+      router.push("/handmatig");
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -124,6 +164,7 @@ export function PlateSearchForm() {
                 value={plate}
                 onChange={(value) => {
                   setPlate(value);
+                  setDemoVehicleId(null);
                   reset();
                 }}
                 describedBy={hintId}
@@ -203,6 +244,7 @@ export function PlateSearchForm() {
                 <button
                   type="button"
                   onClick={() => {
+                    setDemoVehicleId(example.vehicleId);
                     setPlate(example.licensePlate ?? "");
                     setPrice(String(Math.round(example.askingPriceCents / 100)));
                     reset();

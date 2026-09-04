@@ -88,3 +88,29 @@ class DataSourceAdapter(Protocol):
     def fetch_listings(self) -> Iterable[RawListing]:
         """Yield the listings this source currently knows about."""
         ...
+
+
+class VehicleSpecificationSource(Protocol):
+    """A source of vehicle specifications for one license plate.
+
+    Deliberately separate from `DataSourceAdapter`: a specification source
+    describes a vehicle, it never supplies listings, asking prices or market
+    values. Keeping the two protocols apart means an enrichment source cannot
+    quietly become a price source.
+    """
+
+    key: str
+    source_type: DataSourceType
+    name: str
+
+    def fetch_vehicle(self, plate: str) -> RawVehicle | None:
+        """Specifications for a normalized plate, or None when unknown.
+
+        Raises `VehicleSourceUnavailable` when the source could not be reached
+        or answered with something unusable. Callers degrade; they never fail.
+        """
+        ...
+
+
+class VehicleSourceUnavailable(RuntimeError):
+    """The specification source could not be reached or gave nothing usable."""

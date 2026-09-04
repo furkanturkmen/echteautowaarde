@@ -27,6 +27,18 @@ comparable engine (filtering, similarity, widening, structured explanations),
 the valuation engine (robust statistics, outlier handling, transparent
 adjustments, purchase range, deal classification, confidence) and the HTTP API.
 
+A license plate can be enriched from the Dutch open vehicle register: it fills
+in what the register knows about the car (make, model, body, first registration,
+fuel, power, displacement, doors, seats, colour, catalogue price) and asks the
+user for what it does not — mileage, uitvoering and transmission are not in the
+register, and are never guessed. This is the only outbound call the application
+makes and it is **off by default** (`EAW_RDW_ENABLED=true` switches it on); with
+it off or unreachable, the manual route works unchanged. The register is a
+specification source and supplies no market data whatsoever.
+
+Because the demo market invents plates, a demo car never answers for a typed
+plate — it is offered as an example and valued by id instead.
+
 The Dutch consumer interface is built: license-plate or manual entry, a stable
 valuation result page, the market-position view, the comparable evidence table
 with per-car Overeenkomsten/Verschillen, and the valuation build-up.
@@ -51,6 +63,7 @@ with no model installed, everything else works exactly as before.
 GET  /health                      component status (AI may be down; that is fine)
 GET  /vehicles/{id}               vehicle with normalized specification and options
 GET  /vehicles/plate/{plate}      local plate lookup
+GET  /vehicles/plate/{plate}/lookup   local first, then the open vehicle register
 POST /vehicles/manual             manual vehicle entry, normalized on the way in
 POST /comparables/search          the comparable evidence, without a valuation
 POST /valuations                  valuation with evidence, adjustments, confidence

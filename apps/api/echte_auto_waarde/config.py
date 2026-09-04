@@ -42,9 +42,15 @@ class Settings(BaseSettings):
     # before it emits a token; 60 seconds expires during that cold start.
     ollama_timeout_seconds: float = 180.0
 
-    # Optional RDW open-data enrichment (added in a later phase).
+    # Optional plate enrichment from the Dutch open vehicle register. Off by
+    # default: this is the only outbound call the application can make, and a
+    # local-first product does not reach the network unless it is asked to.
+    # Free, no account, no key; the app token is optional and only widens the
+    # publisher's shared throttling pool.
     rdw_enabled: bool = False
     rdw_base_url: str = "https://opendata.rdw.nl/resource"
+    rdw_timeout_seconds: float = 6.0
+    rdw_app_token: str | None = None
 
     @property
     def database_url(self) -> str:

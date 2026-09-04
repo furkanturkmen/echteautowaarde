@@ -14,7 +14,8 @@ import {
   createValuation,
   fetchOptions,
 } from "@/lib/api";
-import { normalizePlate, parseEuroInput } from "@/lib/format";
+import { formatPlate, normalizePlate, parseEuroInput } from "@/lib/format";
+import { takePrefill } from "@/lib/prefill";
 
 /**
  * Manual vehicle entry, for cars the local dataset does not know.
@@ -69,6 +70,20 @@ function Field({
   );
 }
 
+// The register publishes none of these, so the form asks for them by name.
+const MISSING_LABELS: Record<string, string> = {
+  mileage_km: "kilometerstand",
+  transmission: "transmissie",
+  trim: "uitvoering",
+};
+
+function describeMissing(fields: string[]): string {
+  const labels = fields.map((field) => MISSING_LABELS[field] ?? field);
+  if (labels.length === 0) return "";
+  if (labels.length === 1) return labels[0];
+  return `${labels.slice(0, -1).join(", ")} en ${labels[labels.length - 1]}`;
+}
+
 const CONTROL =
   "mt-2 h-11 w-full rounded-eaw border border-line-strong bg-surface px-3 text-sm text-ink " +
   "placeholder:text-subtle";
@@ -93,6 +108,9 @@ export function ManualVehicleForm() {
     licensePlate: "",
     askingPrice: "",
   });
+  // Set when the form was opened from a plate lookup, so the interface can say
+  // where the filled-in values came from and what is still needed.
+  const [prefilled, setPrefilled] = useState<{ plate: string; missing: string[] } | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Set<string>>(new Set());
   const [options, setOptions] = useState<VehicleOption[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -112,6 +130,34 @@ export function ManualVehicleForm() {
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const prefill = takePrefill();
+    if (!prefill) return;
+
+    const { draft } = prefill;
+    // Session storage exists only in the browser, so this cannot be read while
+    // rendering: the server would produce an empty form and the client a filled
+    // one, which is a hydration mismatch. A mount effect is the right place for
+    // a client-only value, and it runs once because the prefill is cleared as
+    // it is read.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setValues((current) => ({
+      ...current,
+      make: draft.make ?? current.make,
+      model: draft.model ?? current.model,
+      year: draft.year ? String(draft.year) : current.year,
+      bodyType: draft.bodyType ?? current.bodyType,
+      fuelType: draft.fuelType ?? current.fuelType,
+      powerHp: draft.powerHp ? String(draft.powerHp) : current.powerHp,
+      licensePlate: draft.licensePlate ?? current.licensePlate,
+      askingPrice: prefill.askingPrice || current.askingPrice,
+    }));
+    setPrefilled({
+      plate: formatPlate(draft.licensePlate ?? "") ?? "",
+      missing: prefill.missingFields,
+    });
   }, []);
 
   function update(field: keyof typeof values, value: string) {
@@ -212,6 +258,21 @@ export function ManualVehicleForm() {
 
   return (
     <form onSubmit={submit} noValidate>
+      {prefilled ? (
+        <div className="mb-8 rounded-eaw border border-line bg-surface-muted p-4">
+          <p className="text-sm text-ink">
+            We hebben de bekende gegevens van {prefilled.plate} uit het open kentekenregister
+            ingevuld.
+          </p>
+          {prefilled.missing.length > 0 ? (
+            <p className="mt-1 text-sm text-muted">
+              Vul zelf nog de {describeMissing(prefilled.missing)} aan — die staan niet in het
+              register en bepalen wel de waarde.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <fieldset className="border-0 p-0">
         <legend className="text-sm font-medium tracking-wide text-muted uppercase">
           De auto
