@@ -20,13 +20,15 @@ const FIELD_LABELS: Record<string, string> = {
   mileage: "kilometerstand",
   year: "bouwjaar",
   engine: "motor",
-  generation: "generatie",
   body_type: "carrosserie",
   transmission: "transmissie",
   trim: "uitvoering",
   power: "vermogen",
   drivetrain: "aandrijving",
   options: "opties",
+  // `generation` is deliberately absent. It carries real weight, but almost
+  // nobody knows their car is an Mk8, so asking for it reads as a demand the
+  // person cannot meet. The form still offers the field to those who do.
 };
 
 const MAX_NAMED_FIELDS = 4;

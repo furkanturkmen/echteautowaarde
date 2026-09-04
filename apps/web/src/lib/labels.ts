@@ -185,7 +185,7 @@ export function describeSimilarityEntry(
     case "SAME_BODY_TYPE":
       return `Zelfde carrosserie (${BODY_TYPE_LABELS[value as BodyType] ?? value})`;
     case "SAME_POWERTRAIN":
-      return `Zelfde aandrijving (${FUEL_TYPE_LABELS[value as FuelType] ?? value})`;
+      return `Zelfde brandstof (${FUEL_TYPE_LABELS[value as FuelType] ?? value})`;
     case "SAME_ENGINE":
       return `Zelfde motorvariant (${value})`;
     case "SAME_TRANSMISSION":
@@ -204,7 +204,7 @@ export function describeSimilarityEntry(
     case "DIFFERENT_BODY_TYPE":
       return `Andere carrosserie: ${BODY_TYPE_LABELS[value as BodyType] ?? value}`;
     case "DIFFERENT_POWERTRAIN":
-      return `Andere aandrijving: ${FUEL_TYPE_LABELS[value as FuelType] ?? value}`;
+      return `Andere brandstof: ${FUEL_TYPE_LABELS[value as FuelType] ?? value}`;
     case "DIFFERENT_ENGINE":
       return `Andere motorvariant: ${value}`;
     case "DIFFERENT_TRANSMISSION":
@@ -248,8 +248,8 @@ export function describeSimilarityEntry(
  * field); the consumer wording is composed here from the level.
  */
 export const WIDENING_LEVEL_LABELS: Record<number, string> = {
-  0: "zelfde model, generatie, aandrijving en transmissie, binnen 3 modeljaren",
-  1: "zelfde model en generatie, vergelijkbare aandrijving, binnen 4 modeljaren",
+  0: "zelfde model, generatie, brandstof en transmissie, binnen 3 modeljaren",
+  1: "zelfde model en generatie, vergelijkbare brandstof, binnen 4 modeljaren",
   2: "zelfde model, elke generatie, binnen 5 modeljaren",
 };
 
