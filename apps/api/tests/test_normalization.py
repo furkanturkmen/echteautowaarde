@@ -183,3 +183,40 @@ def test_the_leftmost_package_wins() -> None:
 def test_unknown_wording_yields_no_trim(text: str | None) -> None:
     """An unrecognised package lowers confidence rather than being invented."""
     assert normalization.find_trim(text) is None
+
+
+# --- Engine designation and power in a listing title -------------------------
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("1.0 eTSI 110pk DSG Life", "1.0 eTSI"),
+        ("Variant 1.5 eTSI R-Line Business 150 PK", "1.5 eTSI"),
+        ("2.0 TSI GTI", "2.0 TSI"),
+        ("2,0 TDI Style", "2.0 TDI"),
+        ("1.6 tdi Comfortline", "1.6 TDI"),
+        # No displacement and family, so nothing is invented.
+        ("45 TFSI quattro", None),
+        ("330e", None),
+        ("Long Range AWD", None),
+        (None, None),
+    ],
+)
+def test_the_engine_designation_is_read_from_a_title(title, expected) -> None:
+    assert normalization.find_engine_designation(title) == expected
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("1.0 eTSI 110pk DSG Life", 110),
+        ("Variant 1.5 eTSI Life Business 150 PK", 150),
+        ("1.0 TSI 90 pk", 90),
+        ("1.5 eTSI Life Business", None),
+        # A four-figure reading is not a power figure.
+        ("1.5 eTSI 9999 pk", None),
+    ],
+)
+def test_the_power_figure_is_read_from_a_title(title, expected) -> None:
+    assert normalization.find_power_hp(title) == expected

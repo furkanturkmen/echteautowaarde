@@ -5,6 +5,7 @@ from echte_auto_waarde.domain.similarity import (
     DEFAULT_WEIGHTS,
     SimilarityWeights,
     score_similarity,
+    unstated_factors,
 )
 from echte_auto_waarde.models.enums import BodyType, Drivetrain, FuelType, Transmission
 
@@ -126,13 +127,78 @@ def test_differences_describe_what_does_not_match() -> None:
     assert missing["value"] == "adaptive_cruise_control"
 
 
-def test_missing_data_is_neither_a_match_nor_a_mismatch() -> None:
+def test_a_characteristic_neither_car_states_takes_no_part_in_the_score() -> None:
+    """It cannot tell the two apart, so it is left out rather than half-scored."""
     unknown_generation = replace(TARGET, generation=None)
     result = score_similarity(TARGET, unknown_generation)
 
-    assert result.components["generation"] == 0.4
+    assert "generation" not in result.components
+    assert "generation" in result.unevaluated
     assert "SAME_GENERATION" not in _codes(result.reasons)
     assert "DIFFERENT_GENERATION" not in _codes(result.differences)
+
+
+def test_an_unstated_characteristic_no_longer_caps_an_otherwise_perfect_match() -> None:
+    """The compression this replaced: dealer listings state no generation,
+    power or drivetrain, which held two identical cars well below a full match.
+    """
+    sparse = replace(TARGET, generation=None, power_hp=None, drivetrain=Drivetrain.UNKNOWN)
+
+    assert score_similarity(sparse, sparse).score == 1.0
+
+
+def test_the_remaining_weights_carry_the_score() -> None:
+    """A mismatch weighs more once the unknown factors leave the average."""
+    with_generation = replace(TARGET, trim="Executive")
+    without_generation = replace(TARGET, trim="Executive", generation=None)
+
+    full = score_similarity(TARGET, with_generation).score
+    partial = score_similarity(replace(TARGET, generation=None), without_generation).score
+
+    assert partial < full
+
+
+def test_a_nearly_empty_description_cannot_score_a_full_match() -> None:
+    """Renormalising must not reward having almost nothing to compare."""
+    bare = VehicleFingerprint(make="BMW", model="3 Serie", year=2021, mileage_km=82_000)
+
+    result = score_similarity(bare, bare)
+
+    assert result.score < 1.0
+    # Only year and mileage are known, so the floor, not the known weight, divides.
+    assert round(result.score, 4) == round((0.12 + 0.14) / 0.5, 4)
+
+
+def test_the_same_engine_written_two_ways_still_matches() -> None:
+    """Dealers title one engine differently; the designation is what matters."""
+    golf = VehicleFingerprint(
+        make="Volkswagen", model="Golf", engine_description="1.0 eTSI 110pk DSG Life"
+    )
+    same_engine = replace(golf, engine_description="Variant 1.0 eTSI Life Business")
+    other_engine = replace(golf, engine_description="1.5 eTSI R-Line Business 150 PK")
+
+    assert score_similarity(golf, same_engine).components["engine"] == 1.0
+    assert score_similarity(golf, other_engine).components["engine"] == 0.0
+    assert "SAME_ENGINE" in _codes(score_similarity(golf, same_engine).reasons)
+
+
+def test_engines_without_a_designation_are_still_compared_whole() -> None:
+    """ "330e" and "45 TFSI quattro" name no displacement and family."""
+    assert (
+        score_similarity(TARGET, replace(TARGET, engine_description="320i")).components["engine"]
+        == 0.0
+    )
+    assert score_similarity(TARGET, TARGET).components["engine"] == 1.0
+
+
+def test_two_cars_that_both_list_no_options_are_not_a_match_on_equipment() -> None:
+    """A source that publishes no options looks exactly like a car with none."""
+    no_options = replace(TARGET, option_keys=frozenset())
+
+    result = score_similarity(no_options, no_options)
+
+    assert "options" not in result.components
+    assert "options" in result.unevaluated
 
 
 def test_important_options_weigh_more_than_trivial_ones() -> None:
@@ -173,3 +239,16 @@ def test_weights_are_configurable_per_search() -> None:
     weighted_score = score_similarity(TARGET, higher_mileage, mileage_matters).score
 
     assert weighted_score < default_score
+
+
+def test_a_target_reports_what_it_does_not_state() -> None:
+    """Heaviest first, so an interface can name the few that matter most."""
+    assert unstated_factors(TARGET) == ()
+
+    thin = VehicleFingerprint(make="BMW", model="3 Serie", year=2020, mileage_km=70_000)
+    missing = unstated_factors(thin)
+
+    assert "fuel_type" in missing and "engine" in missing
+    assert "year" not in missing and "mileage" not in missing
+    # Fuel carries the most weight of anything it leaves blank.
+    assert missing[0] == "fuel_type"

@@ -19,8 +19,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from echte_auto_waarde.domain.fingerprint import VehicleFingerprint
+from echte_auto_waarde.domain.normalization import find_engine_designation
 from echte_auto_waarde.domain.options import OPTIONS_BY_KEY
-from echte_auto_waarde.models.enums import FuelType
+from echte_auto_waarde.models.enums import BodyType, FuelType
 
 
 @dataclass(frozen=True)
@@ -77,9 +78,12 @@ _RELATED_FUELS: dict[frozenset[FuelType], float] = {
     frozenset({FuelType.ELECTRIC, FuelType.PLUGIN_HYBRID}): 0.2,
 }
 
-# Score used when a value is missing on either side: an unknown is neither a
-# match nor a mismatch, and must not be rewarded like a match.
-UNKNOWN_SCORE = 0.4
+# A characteristic neither vehicle states is dropped from the average rather
+# than scored, so the comparison rests on what is actually known about both
+# cars. This floor stops that from rewarding an empty description: when less
+# than half the weight can be evaluated, the missing half still counts
+# against the score.
+MINIMUM_EVALUABLE_WEIGHT = 0.5
 
 
 @dataclass
@@ -88,6 +92,9 @@ class SimilarityBreakdown:
 
     score: float
     components: dict[str, float] = field(default_factory=dict)
+    # Characteristics one or both vehicles do not state, and which therefore
+    # took no part in the score. Kept so the shortfall can be explained.
+    unevaluated: tuple[str, ...] = ()
     reasons: list[dict[str, Any]] = field(default_factory=list)
     differences: list[dict[str, Any]] = field(default_factory=list)
 
@@ -96,22 +103,26 @@ def _linear_closeness(delta: float, tolerance: float) -> float:
     return max(0.0, 1.0 - abs(delta) / tolerance)
 
 
-def _fuel_score(target: FuelType, candidate: FuelType) -> float:
+def _fuel_score(target: FuelType, candidate: FuelType) -> float | None:
     if FuelType.UNKNOWN in (target, candidate):
-        return UNKNOWN_SCORE
+        return None
     if target is candidate:
         return 1.0
     return _RELATED_FUELS.get(frozenset({target, candidate}), 0.0)
 
 
-def _option_score(target: frozenset[str], candidate: frozenset[str]) -> float:
+def _option_score(target: frozenset[str], candidate: frozenset[str]) -> float | None:
     """Importance-weighted overlap of equipment.
 
     An option both cars have counts fully; an option only one has counts against
     the match in proportion to how much that option matters.
+
+    Two vehicles that both list nothing are not a perfect match on equipment —
+    they are a comparison that cannot be made, because sources that publish no
+    options look exactly like cars that have none.
     """
     if not target and not candidate:
-        return 1.0
+        return None
 
     def importance(key: str) -> float:
         definition = OPTIONS_BY_KEY.get(key)
@@ -122,20 +133,87 @@ def _option_score(target: frozenset[str], candidate: frozenset[str]) -> float:
     return shared / union if union else 1.0
 
 
+def _engine_score(target: str | None, candidate: str | None) -> float | None:
+    """How far two engine descriptions describe the same engine.
+
+    Dealers write the same engine differently — "1.0 eTSI 110pk DSG Life" and
+    "Variant 1.0 eTSI Life" are one engine in two titles — so where both sides
+    name a displacement and an engine family, those are compared and the
+    surrounding package and equipment wording is left to the fields that
+    already carry it. Descriptions that carry no such designation ("330e",
+    "45 TFSI quattro") are compared whole, as before.
+    """
+    if not target or not candidate:
+        return None
+
+    target_engine = find_engine_designation(target)
+    candidate_engine = find_engine_designation(candidate)
+    if target_engine and candidate_engine:
+        return 1.0 if target_engine == candidate_engine else 0.0
+    return 1.0 if target == candidate else 0.0
+
+
+def unstated_factors(
+    target: VehicleFingerprint,
+    weights: SimilarityWeights = DEFAULT_WEIGHTS,
+) -> tuple[str, ...]:
+    """Scored characteristics the target does not state, heaviest first.
+
+    A factor the target leaves blank can never be evaluated, whatever the
+    candidate says about itself, so it caps how similar any comparable can be.
+    Naming those factors turns "no comparable was close enough" into something
+    the person can act on.
+    """
+    stated = {
+        "generation": target.generation is not None,
+        "body_type": target.body_type is not BodyType.UNKNOWN,
+        "fuel_type": target.fuel_type is not FuelType.UNKNOWN,
+        "engine": target.engine_description is not None,
+        "power": target.power_hp is not None,
+        "transmission": target.transmission.name != "UNKNOWN",
+        "drivetrain": target.drivetrain.name != "UNKNOWN",
+        "year": target.year is not None,
+        "mileage": target.mileage_km is not None,
+        "trim": target.trim is not None,
+        "options": bool(target.option_keys),
+    }
+    missing = [name for name, known in stated.items() if not known]
+    return tuple(sorted(missing, key=lambda name: -getattr(weights, name)))
+
+
 def score_similarity(
     target: VehicleFingerprint,
     candidate: VehicleFingerprint,
     weights: SimilarityWeights = DEFAULT_WEIGHTS,
 ) -> SimilarityBreakdown:
-    """Score how comparable `candidate` is to `target`, with an explanation."""
+    """Score how comparable `candidate` is to `target`, with an explanation.
+
+    A characteristic neither vehicle states cannot tell the two apart, so it is
+    left out of the average rather than scored as a half match. Counting it
+    used to drag every comparison towards the middle: dealer listings publish
+    no generation, power or drivetrain, which capped even two identical cars
+    well below a full match and left far too little room between a genuine
+    match and a loose one.
+
+    The divisor never drops below `MINIMUM_EVALUABLE_WEIGHT`, so a vehicle
+    described by only one or two fields cannot reach a high score by having
+    almost nothing to compare.
+    """
     components: dict[str, float] = {}
+    unevaluated: list[str] = []
     reasons: list[dict[str, Any]] = []
     differences: list[dict[str, Any]] = []
+
+    def record(field_name: str, score: float | None) -> None:
+        if score is None:
+            unevaluated.append(field_name)
+        else:
+            components[field_name] = score
 
     # --- Generation ---
     if target.generation and candidate.generation:
         same_generation = target.generation == candidate.generation
-        components["generation"] = 1.0 if same_generation else 0.0
+        record("generation", 1.0 if same_generation else 0.0)
         if same_generation:
             reasons.append(
                 {"code": "SAME_GENERATION", "field": "generation", "value": candidate.generation}
@@ -150,16 +228,18 @@ def score_similarity(
                 }
             )
     else:
-        components["generation"] = UNKNOWN_SCORE
+        record("generation", None)
 
     # --- Body type ---
-    if target.body_type is candidate.body_type:
-        components["body_type"] = 1.0
+    if BodyType.UNKNOWN in (target.body_type, candidate.body_type):
+        record("body_type", None)
+    elif target.body_type is candidate.body_type:
+        record("body_type", 1.0)
         reasons.append(
             {"code": "SAME_BODY_TYPE", "field": "body_type", "value": candidate.body_type.value}
         )
     else:
-        components["body_type"] = 0.2
+        record("body_type", 0.2)
         differences.append(
             {
                 "code": "DIFFERENT_BODY_TYPE",
@@ -171,12 +251,12 @@ def score_similarity(
 
     # --- Fuel / powertrain ---
     fuel_score = _fuel_score(target.fuel_type, candidate.fuel_type)
-    components["fuel_type"] = fuel_score
+    record("fuel_type", fuel_score)
     if fuel_score == 1.0:
         reasons.append(
             {"code": "SAME_POWERTRAIN", "field": "fuel_type", "value": candidate.fuel_type.value}
         )
-    elif target.fuel_type is not candidate.fuel_type:
+    elif fuel_score is not None and target.fuel_type is not candidate.fuel_type:
         differences.append(
             {
                 "code": "DIFFERENT_POWERTRAIN",
@@ -187,39 +267,36 @@ def score_similarity(
         )
 
     # --- Engine variant ---
-    if target.engine_description and candidate.engine_description:
-        same_engine = target.engine_description == candidate.engine_description
-        components["engine"] = 1.0 if same_engine else 0.0
-        if same_engine:
-            reasons.append(
-                {"code": "SAME_ENGINE", "field": "engine", "value": candidate.engine_description}
-            )
-        else:
-            differences.append(
-                {
-                    "code": "DIFFERENT_ENGINE",
-                    "field": "engine",
-                    "value": candidate.engine_description,
-                    "target_value": target.engine_description,
-                }
-            )
-    else:
-        components["engine"] = UNKNOWN_SCORE
+    engine_score = _engine_score(target.engine_description, candidate.engine_description)
+    record("engine", engine_score)
+    if engine_score == 1.0:
+        reasons.append(
+            {"code": "SAME_ENGINE", "field": "engine", "value": candidate.engine_description}
+        )
+    elif engine_score is not None:
+        differences.append(
+            {
+                "code": "DIFFERENT_ENGINE",
+                "field": "engine",
+                "value": candidate.engine_description,
+                "target_value": target.engine_description,
+            }
+        )
 
     # --- Power ---
     if target.power_hp and candidate.power_hp:
         delta_hp = candidate.power_hp - target.power_hp
-        components["power"] = _linear_closeness(delta_hp, POWER_TOLERANCE_HP)
+        record("power", _linear_closeness(delta_hp, POWER_TOLERANCE_HP))
         if delta_hp:
             differences.append({"code": "POWER_DIFFERENCE", "field": "power_hp", "delta": delta_hp})
     else:
-        components["power"] = UNKNOWN_SCORE
+        record("power", None)
 
     # --- Transmission ---
     if target.transmission.name == "UNKNOWN" or candidate.transmission.name == "UNKNOWN":
-        components["transmission"] = UNKNOWN_SCORE
+        record("transmission", None)
     elif target.transmission is candidate.transmission:
-        components["transmission"] = 1.0
+        record("transmission", 1.0)
         reasons.append(
             {
                 "code": "SAME_TRANSMISSION",
@@ -228,7 +305,7 @@ def score_similarity(
             }
         )
     else:
-        components["transmission"] = 0.0
+        record("transmission", 0.0)
         differences.append(
             {
                 "code": "DIFFERENT_TRANSMISSION",
@@ -240,11 +317,11 @@ def score_similarity(
 
     # --- Drivetrain ---
     if target.drivetrain.name == "UNKNOWN" or candidate.drivetrain.name == "UNKNOWN":
-        components["drivetrain"] = UNKNOWN_SCORE
+        record("drivetrain", None)
     elif target.drivetrain is candidate.drivetrain:
-        components["drivetrain"] = 1.0
+        record("drivetrain", 1.0)
     else:
-        components["drivetrain"] = 0.25
+        record("drivetrain", 0.25)
         differences.append(
             {
                 "code": "DIFFERENT_DRIVETRAIN",
@@ -257,18 +334,18 @@ def score_similarity(
     # --- Year ---
     if target.year and candidate.year:
         delta_years = candidate.year - target.year
-        components["year"] = _linear_closeness(delta_years, YEAR_TOLERANCE)
+        record("year", _linear_closeness(delta_years, YEAR_TOLERANCE))
         if delta_years == 0:
             reasons.append({"code": "SAME_YEAR", "field": "year", "value": candidate.year})
         else:
             differences.append({"code": "YEAR_DIFFERENCE", "field": "year", "delta": delta_years})
     else:
-        components["year"] = UNKNOWN_SCORE
+        record("year", None)
 
     # --- Mileage ---
     if target.mileage_km is not None and candidate.mileage_km is not None:
         delta_km = candidate.mileage_km - target.mileage_km
-        components["mileage"] = _linear_closeness(delta_km, MILEAGE_TOLERANCE_KM)
+        record("mileage", _linear_closeness(delta_km, MILEAGE_TOLERANCE_KM))
         if abs(delta_km) < 5_000:
             reasons.append({"code": "SIMILAR_MILEAGE", "field": "mileage_km", "delta": delta_km})
         else:
@@ -276,12 +353,12 @@ def score_similarity(
                 {"code": "MILEAGE_DIFFERENCE", "field": "mileage_km", "delta": delta_km}
             )
     else:
-        components["mileage"] = UNKNOWN_SCORE
+        record("mileage", None)
 
     # --- Trim ---
     if target.trim and candidate.trim:
         same_trim = target.trim == candidate.trim
-        components["trim"] = 1.0 if same_trim else 0.2
+        record("trim", 1.0 if same_trim else 0.2)
         if same_trim:
             reasons.append({"code": "SAME_TRIM", "field": "trim", "value": candidate.trim})
         else:
@@ -294,10 +371,10 @@ def score_similarity(
                 }
             )
     else:
-        components["trim"] = UNKNOWN_SCORE
+        record("trim", None)
 
     # --- Options ---
-    components["options"] = _option_score(target.option_keys, candidate.option_keys)
+    record("options", _option_score(target.option_keys, candidate.option_keys))
     for key in sorted(candidate.option_keys - target.option_keys):
         differences.append({"code": "EXTRA_OPTION", "field": "option", "value": key})
     for key in sorted(target.option_keys - candidate.option_keys):
@@ -305,22 +382,15 @@ def score_similarity(
     for key in sorted(target.option_keys & candidate.option_keys):
         reasons.append({"code": "SHARED_OPTION", "field": "option", "value": key})
 
-    weighted = (
-        components["generation"] * weights.generation
-        + components["body_type"] * weights.body_type
-        + components["fuel_type"] * weights.fuel_type
-        + components["engine"] * weights.engine
-        + components["power"] * weights.power
-        + components["transmission"] * weights.transmission
-        + components["drivetrain"] * weights.drivetrain
-        + components["year"] * weights.year
-        + components["mileage"] * weights.mileage
-        + components["trim"] * weights.trim
-        + components["options"] * weights.options
-    )
-    total_weight = weights.total()
-    score = round(weighted / total_weight, 4) if total_weight else 0.0
+    evaluated_weight = sum(getattr(weights, name) for name in components)
+    weighted = sum(score * getattr(weights, name) for name, score in components.items())
+    divisor = max(evaluated_weight, MINIMUM_EVALUABLE_WEIGHT)
+    score = round(weighted / divisor, 4) if divisor else 0.0
 
     return SimilarityBreakdown(
-        score=score, components=components, reasons=reasons, differences=differences
+        score=score,
+        components=components,
+        unevaluated=tuple(unevaluated),
+        reasons=reasons,
+        differences=differences,
     )

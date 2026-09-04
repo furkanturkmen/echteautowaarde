@@ -185,6 +185,94 @@ def find_trim(text: str | None) -> str | None:
     return None
 
 
+# --- Engine designation ----------------------------------------------------
+
+# The engine families used on the Dutch market, written as they appear in
+# listing titles. Longer names come first so "eTSI" is not read as "TSI".
+_ENGINE_FAMILIES = (
+    "etsi",
+    "tfsi",
+    "tsi",
+    "tdi",
+    "cdti",
+    "cdi",
+    "hdi",
+    "dci",
+    "crdi",
+    "thp",
+    "vti",
+    "bluehdi",
+    "ecoboost",
+    "skyactiv",
+    "mhev",
+)
+
+_ENGINE_DESIGNATION = re.compile(
+    r"(?<![\d.,])(\d[.,]\d)\s*-?\s*(" + "|".join(_ENGINE_FAMILIES) + r")\b",
+    re.IGNORECASE,
+)
+
+# "110pk", "110 PK", "150 pk". Kilowatts are written the same way but are a
+# different quantity, so only horsepower is read here.
+_POWER_HP = re.compile(r"\b(\d{2,4})\s*-?\s*pk\b", re.IGNORECASE)
+
+# Outside this band the number is not a power figure — small hybrids start
+# around 60 hp and nothing this product values reaches four figures.
+_POWER_HP_RANGE = (40, 999)
+
+
+def find_engine_designation(text: str | None) -> str | None:
+    """The engine named inside a listing title, as "1.5 eTSI".
+
+    Dealer titles run "1.0 eTSI 110pk DSG Life" or "Variant 1.5 eTSI R-Line
+    Business 150 PK": the same engine, described differently by each dealer.
+    Comparing those strings whole makes identical engines look unrelated, so
+    the comparison uses the displacement and the engine family — the part that
+    says what the engine is — and leaves the package, the gearbox and the
+    equipment prose to the fields that already carry them.
+
+    Unrecognised wording returns nothing, which leaves the engine unknown
+    rather than inventing a designation.
+    """
+    if not text:
+        return None
+
+    match = _ENGINE_DESIGNATION.search(text)
+    if match is None:
+        return None
+    displacement = match.group(1).replace(",", ".")
+    family = match.group(2).lower()
+    return f"{displacement} {_ENGINE_FAMILY_CASING.get(family, family.upper())}"
+
+
+# Written the way the manufacturers write them, so the value can be displayed.
+_ENGINE_FAMILY_CASING = {
+    "etsi": "eTSI",
+    "bluehdi": "BlueHDi",
+    "ecoboost": "EcoBoost",
+    "skyactiv": "SkyActiv",
+    "mhev": "mHEV",
+}
+
+
+def find_power_hp(text: str | None) -> int | None:
+    """The horsepower figure stated in a listing title, if there is one.
+
+    Titles state it often enough to be worth reading — "110pk", "150 PK" — and
+    it is the one thing that separates two cars carrying the same engine
+    designation.
+    """
+    if not text:
+        return None
+
+    match = _POWER_HP.search(text)
+    if match is None:
+        return None
+    power = int(match.group(1))
+    low, high = _POWER_HP_RANGE
+    return power if low <= power <= high else None
+
+
 # --- Enumerated attributes -------------------------------------------------
 
 _BODY_TYPE_ALIASES: dict[str, BodyType] = {

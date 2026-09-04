@@ -164,6 +164,35 @@ def test_the_trim_is_taken_from_the_listing_title() -> None:
     assert listing.vehicle.trim == "Life"
 
 
+def test_the_title_is_read_when_the_stated_gearbox_is_unfamiliar_wording() -> None:
+    """Four pilot listings said "DSG" in the title and stored no transmission.
+
+    The stated field was consulted alone, so wording we do not recognise hid
+    the title that said it plainly.
+    """
+    html = read_fixture("vanmossel_listing.html").replace(
+        '"name": "Volkswagen Golf 1.5 eTSI Life Business AUTOMAAT',
+        '"vehicleTransmission": "Automatische versnellingsbak", '
+        '"name": "Volkswagen Golf 1.0 eTSI 110pk DSG Life',
+    )
+
+    car = read_car(html)
+
+    assert car is not None
+    assert car.transmission == "Dsg"
+
+
+def test_the_power_figure_is_taken_from_the_listing_title() -> None:
+    html = read_fixture("vanmossel_listing.html").replace(
+        "1.5 eTSI Life Business AUTOMAAT", "1.5 eTSI 150pk Life Business AUTOMAAT"
+    )
+
+    car = read_car(html)
+
+    assert car is not None and car.power_hp == 150
+    assert read_car(read_fixture("vanmossel_listing.html")).power_hp is None
+
+
 def test_the_variant_drops_the_equipment_prose() -> None:
     listing = source().parse_listing(read_fixture("vanmossel_listing.html"), LISTING_URL)
 

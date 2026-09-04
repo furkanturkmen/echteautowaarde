@@ -124,6 +124,9 @@ class ValuationRead(ApiModel):
     comparables: list[ComparableRead] = Field(default_factory=list)
 
     insufficient_data_reason: str | None = None
+    # Characteristics the entered vehicle does not state, heaviest first.
+    # The interface names them in Dutch so the shortage is actionable.
+    unstated_target_fields: list[str] = Field(default_factory=list)
     # Describes the evidence this valuation actually used — demo market,
     # imported market data, or both — so provenance is never assumed.
     data_disclaimer: str = SYNTHETIC_DISCLAIMER

@@ -165,7 +165,7 @@ Similarity is expressed on a `0.00`-`1.00` scale throughout the system
 | Fuel / powertrain | 0.15 | Exact match 1.0; related powertrains score partially (PHEV vs hybrid 0.45, petrol vs hybrid 0.35, petrol vs LPG 0.5); unrelated 0.0 |
 | Mileage | 0.14 | Linear over a 60.000 km tolerance (about four years of average Dutch use) |
 | Generation | 0.12 | Exact match or nothing |
-| Engine variant | 0.12 | Exact match or nothing; closeness is covered by power |
+| Engine variant | 0.12 | Displacement and engine family (`1.5 eTSI`) where both titles state one, otherwise the descriptions compared whole; closeness is covered by power |
 | Year | 0.12 | Linear over a five-year tolerance |
 | Body type | 0.08 | Exact match 1.0, otherwise 0.2 |
 | Transmission | 0.07 | Exact match or nothing |
@@ -174,12 +174,51 @@ Similarity is expressed on a `0.00`-`1.00` scale throughout the system
 | Drivetrain | 0.05 | Exact match 1.0, otherwise 0.25 |
 | Options | 0.04 | Importance-weighted overlap (shared importance / union importance) |
 
-A missing value on either side scores 0.4 — an unknown is neither a match nor a
-mismatch, and must not be rewarded like one.
+### Characteristics neither vehicle states
+
+A factor that one or both vehicles leave unstated **takes no part in the score**.
+It is dropped from the weighted average and the remaining weights carry the
+result, which is recorded in `SimilarityBreakdown.unevaluated` so the shortfall
+can be explained.
+
+This replaced a fixed score of 0.4 for unknowns. That fixed score compressed the
+whole scale: dealer listings publish no generation, power, drivetrain or option
+list, so 0.26 of the weight scored 0.4 on every comparison no matter what the
+cars were. Two identical Golfs reached 0.805 and the worst pair in the same
+dataset reached 0.382 — a usable range of 0.42, inside which a genuine match and
+a loose one were hard to tell apart. On the same 39 listings the repaired scale
+runs 0.337 to 0.998.
+
+Renormalising must not reward an empty description, so the divisor never falls
+below **`MINIMUM_EVALUABLE_WEIGHT` (0.5)**. A vehicle described only by make,
+model, year, mileage and trim leaves 0.32 of the weight evaluable and therefore
+cannot exceed `0.32 / 0.5 = 0.64`, which keeps it under the cutoff. That is
+deliberate: three matching numbers are not a comparison, and the honest answer is
+insufficient data rather than a confident-looking valuation.
+
+### The cutoff
 
 `ComparableCriteria` carries the per-search preferences a future "what matters to
-me" interface will set: `min_similarity` (default 0.55), `max_comparables`,
+me" interface will set: `min_similarity` (default **0.65**), `max_comparables`,
 `required_option_keys`, `require_same_transmission` and `require_same_engine`.
+
+The cutoff was 0.55, chosen against the compressed scale. On the repaired scale
+that number admitted almost everything, so it was re-measured by leave-one-out on
+both datasets:
+
+| Cutoff | Real pilot (39 listings) | Demo dataset (122 listings) |
+|---|---|---|
+| 0.55 | median 13.9%, P75 18.7%, 1 without a result | median 9.6%, P75 17.9%, 0 without a result |
+| 0.60 | median 10.9%, P75 21.2%, 1 | median 9.0%, P75 15.4%, 0 |
+| **0.65** | **median 9.6%, P75 14.9%, 1** | **median 8.5%, P75 14.8%, 1** |
+| 0.70 | median 7.6%, P75 12.9%, 2 | median 7.4%, P75 13.9%, 7 |
+| 0.75 | median 7.6%, P75 11.8%, 6 | median 7.3%, P75 15.1%, 17 |
+
+Deviation keeps falling above 0.65, but so does coverage: at 0.70 six percent of
+cars get no valuation at all, and at 0.75 a seventh of them do not. 0.65 lowers
+deviation at every percentile while still valuing all but one car in each
+dataset, and it is a modest enough move not to be tuned to the edge of a
+39-listing sample.
 
 Every comparable returns structured reasons and differences, which the frontend
 renders as **Overeenkomsten** and **Verschillen**.
@@ -297,7 +336,17 @@ Below three comparables no valuation is produced at all. The API returns HTTP
 200 with `sufficientData: false`, no value, and an `insufficientDataReason`
 explaining the shortage; the comparable search separately reports how many
 candidates were considered, how many the filters rejected and how many fell
-below the similarity threshold. The interface surfaces this in Dutch as *"We
+below the similarity threshold.
+
+A shortage often says more about the description than about the market: a
+characteristic the target leaves blank can never be evaluated, so it caps how
+similar any advertisement can be. The refusal therefore carries
+`unstatedTargetFields` — the scored characteristics the entered vehicle does not
+state, heaviest first — and the interface names the heaviest few in Dutch
+("Vul brandstof, transmissie en motor in") instead of only reporting that
+nothing was close enough.
+
+The interface surfaces this in Dutch as *"We
 hebben te weinig vergelijkbare auto's om met voldoende zekerheid een waarde te
 bepalen."*
 

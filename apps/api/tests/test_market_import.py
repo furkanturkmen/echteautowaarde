@@ -389,7 +389,17 @@ def test_a_real_vehicle_is_valued_on_imported_evidence_only(
 
     target = create_manual_vehicle(
         session,
-        RawVehicle(make="BMW", model="3 Serie", year=2020, mileage_km=70_000, trim="M Sport"),
+        RawVehicle(
+            make="BMW",
+            model="3 Serie",
+            year=2020,
+            mileage_km=70_000,
+            trim="M Sport",
+            fuel_type="Plug-in hybride",
+            transmission="Automaat",
+            body_type="Sedan",
+            engine_description="330e",
+        ),
     )
     session.commit()
 
@@ -401,6 +411,36 @@ def test_a_real_vehicle_is_valued_on_imported_evidence_only(
         listing = session.get(Listing, item.candidate.listing_id)
         sources.add(session.get(DataSource, listing.data_source_id).source_type)
     assert sources == {DataSourceType.CSV_IMPORT}
+
+
+def test_a_thinly_described_vehicle_finds_no_comparables(
+    session: Session, tmp_path: Path, monkeypatch
+) -> None:
+    """Make, model, year and mileage are not enough to compare a car.
+
+    Most of the weight is then unstated on the target's side, and the floor in
+    the similarity score keeps what remains below the cutoff. Refusing is the
+    intended answer: a valuation built on three matching numbers would look
+    exactly as confident as one built on a real match.
+    """
+    from echte_auto_waarde import config
+    from echte_auto_waarde.data_sources.base import RawVehicle
+    from echte_auto_waarde.services.comparables import find_comparables
+    from echte_auto_waarde.services.vehicles import create_manual_vehicle
+
+    _mixed_market(session, tmp_path)
+    _use_market_mode(monkeypatch, config, MarketMode.REAL)
+
+    target = create_manual_vehicle(
+        session,
+        RawVehicle(make="BMW", model="3 Serie", year=2020, mileage_km=70_000, trim="M Sport"),
+    )
+    session.commit()
+
+    selection = find_comparables(session, target)
+
+    assert selection.comparables == []
+    assert selection.rejected_below_threshold > 0
 
 
 def test_a_demo_vehicle_is_still_valued_on_the_demo_market(
@@ -440,7 +480,17 @@ def test_a_shortage_of_real_evidence_is_not_filled_with_demo_listings(
 
     target = create_manual_vehicle(
         session,
-        RawVehicle(make="BMW", model="3 Serie", year=2020, mileage_km=70_000, trim="M Sport"),
+        RawVehicle(
+            make="BMW",
+            model="3 Serie",
+            year=2020,
+            mileage_km=70_000,
+            trim="M Sport",
+            fuel_type="Plug-in hybride",
+            transmission="Automaat",
+            body_type="Sedan",
+            engine_description="330e",
+        ),
     )
     session.commit()
 
@@ -473,7 +523,17 @@ def test_the_valuation_response_reports_imported_provenance(
 
     target = create_manual_vehicle(
         session,
-        RawVehicle(make="BMW", model="3 Serie", year=2020, mileage_km=70_000, trim="M Sport"),
+        RawVehicle(
+            make="BMW",
+            model="3 Serie",
+            year=2020,
+            mileage_km=70_000,
+            trim="M Sport",
+            fuel_type="Plug-in hybride",
+            transmission="Automaat",
+            body_type="Sedan",
+            engine_description="330e",
+        ),
     )
     session.commit()
 

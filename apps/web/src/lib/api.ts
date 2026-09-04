@@ -141,6 +141,8 @@ export interface Valuation {
   adjustments: Adjustment[];
   comparables: Comparable[];
   insufficientDataReason: string | null;
+  /** Characteristics the entered vehicle does not state, heaviest first. */
+  unstatedTargetFields: string[];
   dataDisclaimer: string;
 }
 

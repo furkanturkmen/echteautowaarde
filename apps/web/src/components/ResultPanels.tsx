@@ -10,7 +10,43 @@ import type { ApiError, Valuation } from "@/lib/api";
  * the input immediately.
  */
 
+/**
+ * What the backend calls a characteristic, in the words the form uses. A field
+ * the entered vehicle leaves blank caps how similar any advertisement can be,
+ * so naming the heaviest few turns the shortage into something to correct.
+ */
+const FIELD_LABELS: Record<string, string> = {
+  fuel_type: "brandstof",
+  mileage: "kilometerstand",
+  year: "bouwjaar",
+  engine: "motor",
+  generation: "generatie",
+  body_type: "carrosserie",
+  transmission: "transmissie",
+  trim: "uitvoering",
+  power: "vermogen",
+  drivetrain: "aandrijving",
+  options: "opties",
+};
+
+const MAX_NAMED_FIELDS = 4;
+
+/** "brandstof, transmissie en motor" — Dutch uses no comma before "en". */
+function formatList(labels: string[]): string {
+  if (labels.length <= 1) return labels.join("");
+  return `${labels.slice(0, -1).join(", ")} en ${labels[labels.length - 1]}`;
+}
+
+function namedFields(fields: string[]): string[] {
+  return fields
+    .map((field) => FIELD_LABELS[field])
+    .filter((label): label is string => Boolean(label))
+    .slice(0, MAX_NAMED_FIELDS);
+}
+
 export function InsufficientPanel({ valuation }: { valuation: Valuation }) {
+  const missing = namedFields(valuation.unstatedTargetFields ?? []);
+
   return (
     <div className="rounded-eaw-lg border border-line bg-surface p-6 sm:p-8">
       <Info aria-hidden="true" className="size-6 text-brand" />
@@ -29,10 +65,17 @@ export function InsufficientPanel({ valuation }: { valuation: Valuation }) {
         gevonden. We geven bewust geen schatting in plaats van een cijfer dat de markt niet
         draagt.
       </p>
-      <p className="mt-4 text-sm text-muted">
-        Probeer een ander model uit de demomarkt, of vul meer kenmerken in zodat er meer
-        vergelijkbare auto&apos;s gevonden kunnen worden.
-      </p>
+      {missing.length > 0 ? (
+        <p className="mt-4 text-sm text-muted">
+          Deze auto is nog beperkt omschreven. Vul {formatList(missing)} in — hoe meer kenmerken
+          bekend zijn, hoe beter we vergelijkbare auto&apos;s kunnen herkennen.
+        </p>
+      ) : (
+        <p className="mt-4 text-sm text-muted">
+          Probeer een ander model uit de demomarkt, of vul meer kenmerken in zodat er meer
+          vergelijkbare auto&apos;s gevonden kunnen worden.
+        </p>
+      )}
     </div>
   );
 }

@@ -43,7 +43,14 @@ class ComparableCriteria:
     without the engine being redesigned.
     """
 
-    min_similarity: float = 0.55
+    # Raised from 0.55 when similarity stopped scoring unstated
+    # characteristics as half matches: the old cutoff sat mid-range on a
+    # compressed scale, and on the repaired one it admitted cars sharing
+    # little more than a body type. Measured by leave-one-out on both
+    # datasets, 0.65 lowered deviation at every percentile while still
+    # producing a valuation for all but one car in each. See
+    # docs/valuation.md.
+    min_similarity: float = 0.65
     min_comparables: int = 8
     max_comparables: int = 40
     max_year_gap: int = 5

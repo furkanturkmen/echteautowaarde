@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
-from echte_auto_waarde.domain.normalization import find_trim
+from echte_auto_waarde.domain.normalization import find_power_hp, find_trim
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,7 @@ class StructuredCar:
     asking_price_cents: int | None
     fuel: str | None
     transmission: str | None
+    power_hp: int | None
     body_type: str | None
     doors: int | None
 
@@ -123,6 +124,9 @@ def read_car(html: str) -> StructuredCar | None:
         asking_price_cents=_price_cents(node.get("offers")),
         fuel=_fuel(node),
         transmission=_transmission(node),
+        # Titles state the power often enough to be worth reading, and it is
+        # what separates two cars carrying the same engine designation.
+        power_hp=find_power_hp(variant),
         body_type=_text(node.get("bodyType")) or None,
         doors=_int(node.get("numberOfDoors"), 1, 9),
     )
@@ -194,8 +198,14 @@ def _fuel(node: dict[str, Any]) -> str | None:
 
 
 def _transmission(node: dict[str, Any]) -> str | None:
-    stated = _text(node.get("vehicleTransmission"))
-    haystack = (stated or _text(node.get("name"))).lower()
+    """The gearbox, from the schema.org field or else from the title.
+
+    Both are searched, because a stated value is often wording we do not
+    recognise ("Automatische versnellingsbak") on a listing whose title says
+    "DSG" plainly. Consulting only the stated value left those cars without a
+    transmission at all.
+    """
+    haystack = " ".join((_text(node.get("vehicleTransmission")), _text(node.get("name")))).lower()
     for word in _TRANSMISSION_WORDS:
         if word in haystack:
             return word.capitalize()

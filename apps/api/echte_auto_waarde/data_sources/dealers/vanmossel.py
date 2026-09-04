@@ -158,6 +158,7 @@ class VanMosselDataSource:
                 body_type=car.body_type,
                 fuel_type=car.fuel,
                 transmission=car.transmission,
+                power_hp=car.power_hp,
                 doors=car.doors,
                 option_texts=(),
             ),

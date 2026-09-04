@@ -31,6 +31,7 @@ from echte_auto_waarde.domain.deals import (
 )
 from echte_auto_waarde.domain.fingerprint import VehicleFingerprint
 from echte_auto_waarde.domain.options import OPTIONS_BY_KEY
+from echte_auto_waarde.domain.similarity import unstated_factors
 from echte_auto_waarde.domain.statistics import (
     detect_outliers,
     percentile,
@@ -157,6 +158,9 @@ class ValuationResult:
     statistics: MarketStatistics | None = None
     adjustments: list[Adjustment] = field(default_factory=list)
     comparables: list[ScoredComparable] = field(default_factory=list)
+    # Characteristics the target does not state, heaviest first. Only set
+    # on a refusal, where they explain what the person can do about it.
+    unstated_target_fields: tuple[str, ...] = ()
     removed_outlier_listing_ids: list[int] = field(default_factory=list)
     widening_level: int = 0
     insufficient_data_reason: str | None = None
@@ -184,15 +188,22 @@ def value_vehicle(
     comparables = selection.comparables
 
     if len(comparables) < config.minimum_comparables:
+        unstated = unstated_factors(target)
+        reason = (
+            f"Only {len(comparables)} comparable listings met the similarity threshold; "
+            f"at least {config.minimum_comparables} are required for a valuation."
+        )
+        if unstated:
+            # A characteristic the target omits caps every comparison, so a
+            # shortage often says more about the description than the market.
+            reason += " The vehicle states no " + ", ".join(unstated) + "."
         return ValuationResult(
             sufficient_data=False,
             asking_price_cents=asking_price_cents,
             widening_level=selection.widening_level,
             comparables=comparables,
-            insufficient_data_reason=(
-                f"Only {len(comparables)} comparable listings met the similarity threshold; "
-                f"at least {config.minimum_comparables} are required for a valuation."
-            ),
+            insufficient_data_reason=reason,
+            unstated_target_fields=unstated,
         )
 
     prices = [float(item.asking_price_cents) for item in comparables]

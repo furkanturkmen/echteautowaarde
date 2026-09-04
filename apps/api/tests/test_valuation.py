@@ -341,3 +341,18 @@ def test_deal_classification_requires_a_positive_estimate() -> None:
         assert "positive" in str(error)
     else:  # pragma: no cover - guard must raise
         raise AssertionError("expected a ValueError")
+
+
+def test_a_refusal_names_what_the_vehicle_does_not_state() -> None:
+    """ "No comparable was close enough" is not actionable on its own."""
+    from echte_auto_waarde.domain.comparables import ComparableSelection
+
+    thin = VehicleFingerprint(make="BMW", model="3 Serie", year=2020, mileage_km=70_000)
+    empty = ComparableSelection(comparables=[], widening_level=2, widening_description="broadest")
+
+    result = value_vehicle(thin, empty)
+
+    assert result.sufficient_data is False
+    assert "fuel_type" in result.unstated_target_fields
+    assert result.insufficient_data_reason is not None
+    assert "states no" in result.insufficient_data_reason

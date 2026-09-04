@@ -167,6 +167,7 @@ def to_valuation_read(
         ],
         comparables=comparables,
         insufficient_data_reason=result.insufficient_data_reason,
+        unstated_target_fields=list(result.unstated_target_fields),
     )
 
 
