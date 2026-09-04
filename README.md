@@ -31,8 +31,11 @@ The Dutch consumer interface is built: license-plate or manual entry, a stable
 valuation result page, the market-position view, the comparable evidence table
 with per-car Overeenkomsten/Verschillen, and the valuation build-up.
 
-Still to come: the local AI explanation layer — see the implementation order in
-[`CLAUDE.md`](CLAUDE.md).
+The local AI explanation layer answers questions about a finished valuation,
+using only that valuation's own data. Every euro amount in an answer is checked
+against the figures the engine produced — a numeric check, not a verification of
+the explanation itself. It is optional in the strongest sense:
+with no model installed, everything else works exactly as before.
 
 ### Screens
 
@@ -57,6 +60,8 @@ GET  /listings/{id}/history       observed price history of a listing
 GET  /market/stats                what the local dataset contains
 GET  /market/examples             real vehicles from the local dataset to start from
 GET  /options                     the canonical option taxonomy
+POST /ai/chat                     ask about a stored valuation (local model, optional)
+GET  /ai/valuations/{id}/suggestions   example questions this valuation can answer
 ```
 
 ## Architecture
@@ -129,8 +134,15 @@ ollama pull qwen2.5:7b-instruct
 ollama serve
 ```
 
-If Ollama is not running, valuation, comparison and market statistics keep
-working and the interface reports that AI advice is temporarily unavailable.
+`ollama list` shows what is installed. The model must follow instructions in
+Dutch — code models such as `qwen2.5-coder` stay safe but refuse questions the
+data does answer. Nothing is downloaded by the application itself.
+
+If Ollama is not running or the configured model is missing, valuation,
+comparison and market statistics keep working, `/health` stays `ok`, and the
+result page shows a short note in place of the question box. See
+[`docs/local-ai.md`](docs/local-ai.md) for the grounding rules and the numeric
+check that verifies every amount an answer mentions.
 
 ### Configuration
 

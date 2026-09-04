@@ -199,3 +199,46 @@ class ExampleVehicleRead(ApiModel):
     trim: str | None = None
     engine_description: str | None = None
     asking_price_cents: int
+
+
+class AiChatRequest(ApiModel):
+    """A question about one stored valuation.
+
+    Only the id and the question are accepted. Valuation figures are never taken
+    from the client: the server loads the stored valuation and builds the AI
+    context from it, so a tampered request cannot change what is explained.
+    """
+
+    valuation_id: int = Field(ge=1)
+    message: str = Field(min_length=2, max_length=600)
+
+
+class AiChatRead(ApiModel):
+    """An answer, or a documented reason there is none."""
+
+    available: bool
+    provider: str
+    model: str
+    answer: str | None = None
+    grounded: bool = Field(
+        default=True,
+        description=(
+            "Whether every euro amount in the answer matches an amount this "
+            "valuation produced. This is a numeric check and nothing more: it "
+            "says the figures are ours, not that the answer's reasoning, "
+            "comparisons or wording were verified. An answer can be grounded "
+            "and still describe a relationship incorrectly. False means an "
+            "amount appears that the valuation did not produce."
+        ),
+    )
+    grounding_note: str | None = None
+    unavailable_reason: str | None = None
+
+
+class AiSuggestionsRead(ApiModel):
+    """Example questions the current valuation can actually answer."""
+
+    available: bool
+    provider: str
+    model: str
+    questions: list[str] = Field(default_factory=list)

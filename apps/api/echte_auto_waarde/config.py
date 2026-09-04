@@ -38,7 +38,9 @@ class Settings(BaseSettings):
     ai_enabled: bool = True
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b-instruct"
-    ollama_timeout_seconds: float = 60.0
+    # A 7B model on CPU spends the first request loading several gigabytes
+    # before it emits a token; 60 seconds expires during that cold start.
+    ollama_timeout_seconds: float = 180.0
 
     # Optional RDW open-data enrichment (added in a later phase).
     rdw_enabled: bool = False

@@ -1,6 +1,7 @@
 import { Info } from "lucide-react";
 
 import { AdjustmentBreakdown } from "@/components/AdjustmentBreakdown";
+import { AskPanel } from "@/components/AskPanel";
 import { ComparableEvidence } from "@/components/ComparableEvidence";
 import { ConfidenceIndicator } from "@/components/ConfidenceIndicator";
 import { DealBadge } from "@/components/DealBadge";
@@ -273,6 +274,8 @@ export function ValuationResult({ valuation }: { valuation: Valuation }) {
           </div>
         </div>
       </section>
+
+      {valuation.id !== null ? <AskPanel valuationId={valuation.id} /> : null}
     </>
   );
 }

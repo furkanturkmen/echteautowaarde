@@ -259,3 +259,33 @@ export function createManualVehicle(payload: ManualVehicleInput): Promise<Vehicl
 export function fetchValuation(valuationId: number): Promise<Valuation> {
   return request<Valuation>(`/valuations/${valuationId}`);
 }
+
+export interface AiAnswer {
+  available: boolean;
+  provider: string;
+  model: string;
+  answer: string | null;
+  grounded: boolean;
+  groundingNote: string | null;
+  unavailableReason: string | null;
+}
+
+export interface AiSuggestions {
+  available: boolean;
+  provider: string;
+  model: string;
+  questions: string[];
+}
+
+export function askAboutValuation(valuationId: number, message: string): Promise<AiAnswer> {
+  // Only the id and the question travel: the backend loads the stored valuation
+  // and builds the AI context itself, so nothing here is authoritative.
+  return request<AiAnswer>("/ai/chat", {
+    method: "POST",
+    body: JSON.stringify({ valuationId, message }),
+  });
+}
+
+export function fetchAiSuggestions(valuationId: number): Promise<AiSuggestions> {
+  return request<AiSuggestions>(`/ai/valuations/${valuationId}/suggestions`);
+}

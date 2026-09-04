@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from echte_auto_waarde.api.routes import (
+    ai,
     comparables,
     health,
     listings,
@@ -41,6 +42,7 @@ def create_app() -> FastAPI:
     app.include_router(valuations.router)
     app.include_router(listings.router)
     app.include_router(options.router)
+    app.include_router(ai.router)
     return app
 
 

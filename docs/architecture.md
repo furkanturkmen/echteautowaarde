@@ -24,6 +24,7 @@ infrastructure. Everything a developer needs runs on one machine.
 | `domain/` | Normalization, comparable engine, valuation, confidence — pure logic |
 | `services/` | Orchestration between persistence, domain and adapters |
 | `data_sources/` | `DataSourceAdapter` implementations (synthetic, CSV, RDW, …) |
+| `ai/` | Provider abstraction, Ollama client, prompt, grounding check |
 | `api/routes/` | Thin FastAPI routers; no business rules |
 
 The domain layer holds the valuable logic and is deliberately free of FastAPI
@@ -65,6 +66,12 @@ Ollama sits behind an `AIProvider` abstraction and is optional by design. If it
 is unavailable, `/health` reports the AI component as unavailable while overall
 status stays `ok`, and valuation, comparison and market statistics continue to
 work.
+
+The assistant explains a stored valuation and never produces one. The server
+loads that valuation and builds the structured context itself, so client input
+cannot become AI context, and every euro amount in an answer is verified against
+the valuation before it reaches the interface. See
+[`local-ai.md`](local-ai.md).
 
 ## What is deliberately absent
 
