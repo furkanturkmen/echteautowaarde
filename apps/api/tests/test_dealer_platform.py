@@ -177,6 +177,15 @@ def test_a_listing_is_read_from_its_published_structured_data() -> None:
     assert listing.vehicle.fuel_type == "Benzine"
 
 
+def test_the_trim_is_taken_from_the_listing_title() -> None:
+    listing = source(SequenceFetcher()).parse_listing(
+        read_fixture("platform_listing.html"), IN_SEGMENT_URL
+    )
+
+    assert listing is not None
+    assert listing.vehicle.trim == "Life"
+
+
 def test_a_listing_outside_the_year_band_is_dropped_after_reading() -> None:
     listing = source(SequenceFetcher()).parse_listing(
         read_fixture("platform_out_of_segment.html"), OUT_OF_SEGMENT_URL

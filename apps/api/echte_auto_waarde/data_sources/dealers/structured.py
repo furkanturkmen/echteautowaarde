@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+from echte_auto_waarde.domain.normalization import find_trim
+
 logger = logging.getLogger(__name__)
 
 _JSON_LD = re.compile(
@@ -50,6 +52,7 @@ class StructuredCar:
     make: str
     model: str
     variant: str | None
+    trim: str | None
     first_registration: date | None
     year: int | None
     mileage_km: int | None
@@ -105,10 +108,15 @@ def read_car(html: str) -> StructuredCar | None:
     registration = _date(node.get("dateVehicleFirstRegistered"))
     year = registration.year if registration else _int(node.get("vehicleModelDate"), 1950, 2100)
 
+    variant = _variant(node, make, model)
     return StructuredCar(
         make=make,
         model=model,
-        variant=_variant(node, make, model),
+        variant=variant,
+        # Listings name the package inside the title rather than in a field of
+        # its own, and an unrecognised name stays absent rather than becoming a
+        # guess.
+        trim=find_trim(variant),
         first_registration=registration,
         year=year,
         mileage_km=_quantity(node.get("mileageFromOdometer"), 0, 2_000_000),

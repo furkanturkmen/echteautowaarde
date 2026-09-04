@@ -174,6 +174,7 @@ class PlatformDataSource:
                 mileage_km=car.mileage_km,
                 first_registration_date=car.first_registration,
                 engine_description=car.variant,
+                trim=car.trim,
                 body_type=car.body_type,
                 fuel_type=car.fuel,
                 transmission=car.transmission,

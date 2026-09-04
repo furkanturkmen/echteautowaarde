@@ -266,6 +266,27 @@ number in that same block are never read.
 Coverage from the live pilot was 20/20 on year, mileage, price, fuel, body type
 and first registration — against 5/20 for transmission when scraping markup.
 
+### Trim comes from the title
+
+These platforms state the package inside the listing title — "1.5 eTSI Life
+Business Automaat" — rather than in a field of its own, so
+`normalization.find_trim` recognises it within the text. Longer names win over
+the words they contain, the leftmost match wins because a title names the trim
+before it lists equipment, and wording the taxonomy does not know yields nothing
+rather than a guess.
+
+It matters more than it looks. Without it every listing had an empty trim, so
+the trim factor was neutral for the whole sample and a Golf GTI scored two
+points below a near-identical car. Measured on the same 39 listings, filling it
+in moved median deviation from asking prices from 11.6% to 10.6% and P75 from
+24.9% to 22.0%, and pushed the GTI from 64% similarity to 62% while genuine
+matches rose to 68%.
+
+That leaves the compression itself: even an all-but-identical car tops out
+around 68%, so every comparable still carries meaningful weight. Changing that
+means changing similarity weights, which is valuation methodology and belongs in
+a deliberate pass measured against these numbers.
+
 ### The dealer sources
 
 | Source | How it reads | Notes |

@@ -145,3 +145,41 @@ def test_appearance_package_is_not_turned_into_a_performance_model() -> None:
 )
 def test_license_plate_normalization(raw: str | None, expected: str | None) -> None:
     assert normalization.normalize_license_plate(raw) == expected
+
+
+# --- Finding a trim inside a longer description ------------------------------
+#
+# Dealer listings name the package in the title rather than in a field of its
+# own, so it has to be recognised within the text.
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("1.5 eTSI Life Business AUTOMAAT", "Life"),
+        ("1.0 eTSI 110pk DSG Life", "Life"),
+        ("2.0 TSI GTI", "GTI"),
+        ("1.5 eTSI R-Line Business 150 pk", "R-Line"),
+        ("Variant 1.5 eTSI Style", "Style"),
+        ("1.4 eHybrid GTE", "GTE"),
+        ("330e M Sport", "M Sport"),
+    ],
+)
+def test_a_trim_is_found_inside_a_longer_description(text: str, expected: str) -> None:
+    assert normalization.find_trim(text) == expected
+
+
+def test_a_longer_package_name_wins_over_the_word_it_contains() -> None:
+    """ "Business Edition" must not be read as "Business"."""
+    assert normalization.find_trim("2.0 TDI Business Edition") == "Business Edition"
+
+
+def test_the_leftmost_package_wins() -> None:
+    """A title names the trim before it lists the equipment."""
+    assert normalization.find_trim("1.5 eTSI Style met Business pakket") == "Style"
+
+
+@pytest.mark.parametrize("text", ["2.9 TFSI RS 5 quattro", "1.0 TSI 110 pk", "", None])
+def test_unknown_wording_yields_no_trim(text: str | None) -> None:
+    """An unrecognised package lowers confidence rather than being invented."""
+    assert normalization.find_trim(text) is None

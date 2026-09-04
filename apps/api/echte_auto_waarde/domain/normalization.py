@@ -140,6 +140,11 @@ _TRIM_ALIASES: dict[str, str] = {
     "comfortline": "Comfortline",
     "lifeplus": "Life Plus",
     "life": "Life",
+    # Performance designations. They are trim rather than model, and they move
+    # the price far more than any other package.
+    "gti": "GTI",
+    "gte": "GTE",
+    "golfr": "R",
 }
 
 
@@ -148,6 +153,36 @@ def normalize_trim(value: str | None) -> str | None:
         return None
     canonical = _TRIM_ALIASES.get(_lookup_key(value))
     return canonical or collapse_whitespace(value)
+
+
+# The longest package name in the taxonomy is three words ("Standard Range
+# Plus"), so windows wider than that cannot match anything.
+_MAX_TRIM_WORDS = 3
+
+
+def find_trim(text: str | None) -> str | None:
+    """The trim named inside a longer description, if there is one.
+
+    Dealer listings state the trim as part of a title — "1.5 eTSI Life Business
+    Automaat" — rather than in a field of its own, so the package has to be
+    recognised within the text. Longer names are tried first, so "Business
+    Edition" is not read as "Business", and the leftmost match wins, because a
+    title names the trim before it lists the equipment.
+
+    Only names already in the taxonomy are recognised. Unknown wording returns
+    nothing rather than a guess, which leaves the vehicle without a trim and
+    lowers its confidence instead of inventing a package.
+    """
+    if not text:
+        return None
+
+    words = collapse_whitespace(text).split(" ")
+    for start in range(len(words)):
+        for width in range(min(_MAX_TRIM_WORDS, len(words) - start), 0, -1):
+            candidate = _TRIM_ALIASES.get(_lookup_key(" ".join(words[start : start + width])))
+            if candidate:
+                return candidate
+    return None
 
 
 # --- Enumerated attributes -------------------------------------------------

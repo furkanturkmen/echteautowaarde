@@ -155,6 +155,15 @@ def test_a_listing_is_read_from_its_published_structured_data() -> None:
     assert listing.vehicle.doors == 5
 
 
+def test_the_trim_is_taken_from_the_listing_title() -> None:
+    """The platforms state the package in the title, not in a field."""
+    listing = source().parse_listing(read_fixture("vanmossel_listing.html"), LISTING_URL)
+
+    assert listing is not None
+    # "Volkswagen Golf 1.5 eTSI Life Business AUTOMAAT | PANORAMADAK | ..."
+    assert listing.vehicle.trim == "Life"
+
+
 def test_the_variant_drops_the_equipment_prose() -> None:
     listing = source().parse_listing(read_fixture("vanmossel_listing.html"), LISTING_URL)
 
