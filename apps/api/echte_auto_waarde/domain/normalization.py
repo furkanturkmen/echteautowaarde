@@ -209,6 +209,7 @@ _TRANSMISSION_ALIASES: dict[str, Transmission] = {
     "tiptronic": Transmission.AUTOMATIC,
     "stronic": Transmission.AUTOMATIC,
     "handgeschakeld": Transmission.MANUAL,
+    "handmatig": Transmission.MANUAL,
     "handbak": Transmission.MANUAL,
     "manual": Transmission.MANUAL,
     "manueel": Transmission.MANUAL,

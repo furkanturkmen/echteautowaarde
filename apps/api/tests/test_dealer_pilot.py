@@ -362,8 +362,18 @@ def test_synthetic_listings_stay_out_of_real_valuations() -> None:
     assert DataSourceType.SYNTHETIC not in real
 
 
-def test_only_the_two_allowlisted_dealers_are_supported() -> None:
-    assert sorted(DEALER_SOURCES) == ["autoxl", "inzoeven"]
+def test_only_allowlisted_dealers_are_supported() -> None:
+    """Adding a source is a deliberate act with its own robots and terms review."""
+    assert sorted(DEALER_SOURCES) == [
+        "autoxl",
+        "ekris",
+        "hoogenboom",
+        "inzoeven",
+        "nefkens",
+        "pouw",
+        "vandenbrug",
+        "vanmossel",
+    ]
 
 
 def test_a_trim_that_looks_like_a_sales_word_survives() -> None:

@@ -50,7 +50,7 @@ _FUEL_WORDS = ("benzine", "diesel", "elektrisch", "hybride", "lpg", "cng", "wate
 # exact words are recognised; anything else stays unknown rather than guessed.
 # Order matters: the longer wording is checked first so "semi-automaat" is not
 # read as "automaat".
-_TRANSMISSION_WORDS = ("semi-automaat", "handgeschakeld", "automaat")
+_TRANSMISSION_WORDS = ("semi-automaat", "handgeschakeld", "handmatig", "automaat")
 
 
 @dataclass

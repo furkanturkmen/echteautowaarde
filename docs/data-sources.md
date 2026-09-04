@@ -250,6 +250,57 @@ last asking price is **not** a sale price, and no sale price is ever recorded.
 A rejected or failed import retires nothing — verified by tests, because the
 alternative is a bad file quietly emptying a market.
 
+### Reading published structured data
+
+Some dealer platforms embed schema.org `Car` data in every listing — the same
+block they hand to search engines. Where it exists it is the better source: it
+is published deliberately for machines, it states facts rather than
+presentation, and it survives a redesign that would break any CSS selector.
+
+`data_sources/dealers/structured.py` reads it generically. It looks for
+`@type: Car`, takes only the fields a valuation needs, and refuses what it
+cannot trust: mileage in miles, a price in a currency other than euro, a page
+with no block at all. The photographs, descriptions, VIN and dealer telephone
+number in that same block are never read.
+
+Coverage from the live pilot was 20/20 on year, mileage, price, fuel, body type
+and first registration — against 5/20 for transmission when scraping markup.
+
+### The dealer sources
+
+| Source | How it reads | Notes |
+|---|---|---|
+| `vanmossel` | sitemap states fuel and year, so the segment is selected **before** fetching | 12,891 listings; nothing out of segment is ever requested |
+| `pouw`, `vandenbrug`, `hoogenboom`, `nefkens`, `ekris` | one shared platform, one adapter | slug names the model only, so the segment is verified after reading |
+| `inzoeven`, `autoxl` | inventory-page markup | no structured data published |
+
+Five dealers share one platform — identical `robots.txt`, identical
+`/p/<slug>-<id>` URLs, identical structured data — because a dealer's website is
+just another output of the stock system that also feeds the marketplaces. One
+adapter therefore reads all five, but each keeps its own source key, its own
+robots check and its own cap. **Sharing code is not sharing permission.**
+
+Two of them sell no Volkswagens at all: Nefkens is Stellantis, Ekris is
+BMW/MINI. They are listed because the platform supports them, not because they
+help this segment.
+
+### The segment, and why it moved
+
+`data_sources/dealers/segment.py` defines it once for every source: Volkswagen
+Golf, 2020-2024, petrol, excluding the Sportsvan.
+
+It is not where we started. Phase 14 measured 17,000 dealer listings looking for
+Golf 2013-2017 petrol and found **one** — the largest group in the country had
+three, all a different body style. Official dealers trade eight-year-old cars
+away rather than retail them, so that stock sits with small independents, five
+cars at a time. The segment follows the supply.
+
+Slugs that state a plug-in powertrain (`ehybrid`, `-gte`) are skipped before
+fetching. The fuel rule excludes them anyway; recognising it in the URL only
+avoids opening a page certain to be rejected. That matters more than it sounds:
+one dealer's Golf stock is 36 plug-in hybrids out of 49, and a run once spent
+its entire request budget on cars it was always going to reject.
+
 ### Scope is immutable
 
 Within one data source, **a listing keeps the scope it was first imported

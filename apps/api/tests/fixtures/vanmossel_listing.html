@@ -1,0 +1,30 @@
+<html><head>
+<!-- Minimal stand-in for a listing page: the schema.org block the parser reads,
+     plus the photo/description/VIN fields it must ignore. Invented vehicle. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Car",
+  "name": "Volkswagen Golf 1.5 eTSI Life Business AUTOMAAT | PANORAMADAK | STOELVERWARMING",
+  "manufacturer": "Volkswagen",
+  "model": "Golf",
+  "bodyType": "hatchback",
+  "color": "Pure white",
+  "dateVehicleFirstRegistered": "2022-04-14",
+  "vehicleModelDate": "2021",
+  "description": "Volkswagen Golf. 41.250 km. Deze prachtige auto is voorzien van alle luxe.",
+  "vehicleIdentificationNumber": "WVWZZZCD6RW820609",
+  "numberOfDoors": "5",
+  "fuelType": "petrol",
+  "mileageFromOdometer": {"@type": "QuantitativeValue", "unitCode": "KMT", "value": 41250},
+  "image": ["https://example.invalid/photo-1.webp", "https://example.invalid/photo-2.webp"],
+  "offers": {
+    "@type": "Offer",
+    "price": 27900,
+    "priceCurrency": "EUR",
+    "availability": {"@value": "https://schema.org/InStock"},
+    "seller": {"@type": "AutoDealer", "name": "Voorbeeld Dealer", "telephone": "+31 900 1234567"}
+  }
+}
+</script>
+</head><body><h1>Volkswagen Golf</h1></body></html>
