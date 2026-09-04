@@ -20,6 +20,7 @@ from echte_auto_waarde.domain.valuation import (
     ValuationResult,
     value_vehicle,
 )
+from echte_auto_waarde.models.enums import DataSourceType
 from echte_auto_waarde.models.valuation import ComparableResultRecord, Valuation
 from echte_auto_waarde.models.vehicle import Vehicle
 from echte_auto_waarde.services.comparables import find_comparables
@@ -31,9 +32,22 @@ def valuate_vehicle(
     asking_price_cents: int | None = None,
     criteria: ComparableCriteria = DEFAULT_CRITERIA,
     config: ValuationConfig = DEFAULT_CONFIG,
+    exclude_listing_id: int | None = None,
+    evidence_sources: frozenset[DataSourceType] | None = None,
 ) -> ValuationResult:
-    """Run the full pipeline for one vehicle without storing anything."""
-    selection = find_comparables(session, target, criteria)
+    """Run the full pipeline for one vehicle without storing anything.
+
+    The two exclusion arguments exist for offline evaluation, which values a
+    listing against every other listing but itself. They only ever narrow the
+    evidence; the methodology below is untouched by them.
+    """
+    selection = find_comparables(
+        session,
+        target,
+        criteria,
+        exclude_listing_id=exclude_listing_id,
+        evidence_sources=evidence_sources,
+    )
     fingerprint = VehicleFingerprint.from_vehicle(target)
 
     qualities = [item.candidate.source_quality for item in selection.comparables]

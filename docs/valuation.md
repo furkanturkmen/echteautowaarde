@@ -10,6 +10,90 @@ configuration dataclass in the domain layer — `SimilarityWeights`,
 per search or per request.*
 
 
+
+## Measuring the model against real evidence
+
+Once a lawful real dataset has been imported, the engine can be measured against
+it offline. The framework runs the production valuation code; it reimplements
+nothing and tunes nothing.
+
+### What is measured, and what is not
+
+**This is not accuracy.** An asking price is what somebody was asking — not what
+a car sold for, and not what it was worth. A dealer's optimistic price and a
+private seller's quick-sale price are both legitimate observations, and an
+estimate that differs from either is not thereby wrong. We have no sale prices,
+so we cannot measure accuracy, and nothing here should ever be described as
+error against truth.
+
+What is measured is **deviation from observed asking prices**: whether the
+valuation is coherent with the market it was given. Consistently large deviation
+is a reason to investigate; small deviation means the model agrees with sellers,
+which is a weaker claim than being right.
+
+### Leave-one-out
+
+Every eligible listing becomes a target in turn:
+
+1. its vehicle is the target,
+2. **that listing is excluded from the evidence** (`exclude_listing_id` at the
+   comparable boundary, so a listing can never value itself),
+3. the normal comparable pipeline runs,
+4. the normal valuation pipeline runs,
+5. the estimate is compared with that listing's observed asking price.
+
+The asking price is deliberately not passed to the engine: the number being
+measured must not influence the number doing the measuring.
+
+Only **real evidence** takes part — imported and other non-synthetic sources —
+regardless of the configured market mode. Demo listings are never evaluated and
+never used as evidence.
+
+### Metrics
+
+Evaluated count, insufficient-evidence count, median absolute deviation in euros
+and as a percentage, P75 and P90 absolute percentage deviation, mean signed
+percentage deviation, and the share estimated above and below the observed ask.
+Segments are reported by model, model year, mileage band, transmission, fuel,
+body type, trim, comparable-count band, similarity band and confidence band, and
+a group is only reported when it has at least five members.
+
+The confidence diagnostic asks one directional question — do higher-confidence
+valuations deviate less than low-confidence ones? — and reports the answer.
+**It changes nothing.** Weight calibration would be a separate, deliberate phase.
+
+The largest deviations are listed with their evidence and adjustments for
+engineering diagnosis. Nothing is excluded from the metrics for being an outlier.
+
+### Example
+
+```powershell
+python -m echte_auto_waarde.evaluate_market --source-key import:dealer-example
+python -m echte_auto_waarde.evaluate_market --make BMW --model "3 Serie" --output report.json
+```
+
+Nothing is stored: an evaluation creates no valuation records and leaves
+consumer history untouched.
+
+### Limitations
+
+- **Not point-in-time.** Evaluation uses the current state of each listing, not
+  the market as it stood when that listing was observed. Historical
+  reconstruction would need evidence to be rebuilt as of a moment in time, which
+  is a redesign, not a flag. This is not backtesting and is not described as it.
+- Asking prices are not sale prices, so no result is a measure of accuracy.
+- A dataset dominated by one seller measures that seller's pricing policy.
+- Small segments are dropped rather than reported unreliably.
+
+### The intended process
+
+```
+lawful real dataset -> import -> evaluate -> inspect diagnostics
+   -> only then consider methodology calibration
+```
+
+Calibration is deliberately last, and deliberately a separate decision.
+
 ## Which evidence a valuation may use
 
 Before any of the methodology below runs, the comparable query decides what

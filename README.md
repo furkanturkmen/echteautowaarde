@@ -207,6 +207,23 @@ listing that stops appearing is recorded as removed, never as sold, and an
 asking price is never a sale price. See
 [`docs/data-sources.md`](docs/data-sources.md) for the column contract.
 
+### 7. Measuring the engine against imported data (optional)
+
+With real data imported, the valuation engine can be measured against it
+offline. Every listing is valued against every other listing but itself, and the
+estimate is compared with the asking price that was observed:
+
+```powershell
+cd apps\api
+.\.venv\Scripts\python.exe -m echte_auto_waarde.evaluate_market --source-key import:dealer-example
+```
+
+This reports **deviation from observed asking prices**, which is a coherence
+check — not accuracy. We have no sale prices, so no result here is a measure of
+correctness, and nothing is tuned automatically. Evaluation stores nothing and
+leaves consumer valuation history untouched. See
+[`docs/valuation.md`](docs/valuation.md).
+
 ### Configuration
 
 Copy `.env.example` to `.env` (backend) and `apps/web/.env.example` to

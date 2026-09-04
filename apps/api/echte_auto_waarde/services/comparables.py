@@ -21,7 +21,7 @@ from echte_auto_waarde.domain.comparables import (
 )
 from echte_auto_waarde.domain.evidence import evidence_source_types
 from echte_auto_waarde.domain.fingerprint import VehicleFingerprint
-from echte_auto_waarde.models.enums import ListingStatus
+from echte_auto_waarde.models.enums import DataSourceType, ListingStatus
 from echte_auto_waarde.models.listing import DataSource, Listing
 from echte_auto_waarde.models.option import VehicleOption
 from echte_auto_waarde.models.vehicle import Vehicle
@@ -36,6 +36,8 @@ def load_candidates(
     session: Session,
     target: Vehicle,
     exclude_vehicle_id: int | None = None,
+    exclude_listing_id: int | None = None,
+    evidence_sources: frozenset[DataSourceType] | None = None,
 ) -> list[ComparableCandidate]:
     """Load every usable listing on the same model line as the target vehicle.
 
@@ -45,7 +47,10 @@ def load_candidates(
     listings. Everything downstream receives comparables without knowing which
     adapter produced them.
     """
-    allowed_sources = evidence_source_types(
+    # `evidence_sources` lets a caller state the policy instead of deriving it —
+    # the evaluation framework evaluates real evidence whatever this
+    # installation is configured for. Omitted, the normal policy applies.
+    allowed_sources = evidence_sources or evidence_source_types(
         get_settings().market_mode, target_is_demo=is_demo_vehicle(target)
     )
 
@@ -71,6 +76,12 @@ def load_candidates(
     if exclude_id is not None:
         statement = statement.where(Vehicle.id != exclude_id)
 
+    # A listing may never be evidence for itself. Vehicle exclusion already
+    # covers the ordinary case; this is explicit so leave-one-out evaluation
+    # cannot be defeated by two listings sharing a vehicle.
+    if exclude_listing_id is not None:
+        statement = statement.where(Listing.id != exclude_listing_id)
+
     candidates: list[ComparableCandidate] = []
     for listing in session.scalars(statement).unique():
         candidates.append(
@@ -91,8 +102,16 @@ def find_comparables(
     target: Vehicle,
     criteria: ComparableCriteria = DEFAULT_CRITERIA,
     exclude_vehicle_id: int | None = None,
+    exclude_listing_id: int | None = None,
+    evidence_sources: frozenset[DataSourceType] | None = None,
 ) -> ComparableSelection:
     """Find comparables for a target vehicle, widening only if needed."""
-    candidates = load_candidates(session, target, exclude_vehicle_id=exclude_vehicle_id)
+    candidates = load_candidates(
+        session,
+        target,
+        exclude_vehicle_id=exclude_vehicle_id,
+        exclude_listing_id=exclude_listing_id,
+        evidence_sources=evidence_sources,
+    )
     fingerprint = VehicleFingerprint.from_vehicle(target)
     return select_comparables(fingerprint, candidates, criteria)
