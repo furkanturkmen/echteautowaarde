@@ -73,6 +73,19 @@ cannot become AI context, and every euro amount in an answer is verified against
 the valuation before it reaches the interface. See
 [`local-ai.md`](local-ai.md).
 
+## Market evidence
+
+Two markets can exist in one database: the synthetic demo market and whatever
+real listings were imported. They never mix in a valuation — `domain/evidence.py`
+holds the rule and `services/comparables.py` applies it once, in the candidate
+query.
+
+Imports go through the existing adapter architecture:
+`CsvImportDataSource` → `ingest()` → listings, snapshots and an `ImportRun`.
+Validation completes before anything is written, the whole import is one
+transaction, and only a `COMPLETED` full snapshot may mark absent listings
+`REMOVED` — which means "not observed", never "sold".
+
 ## Network
 
 One outbound call exists in the whole application: a plate lookup may ask the

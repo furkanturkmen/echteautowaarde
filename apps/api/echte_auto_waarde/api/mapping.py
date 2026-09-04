@@ -14,6 +14,7 @@ from echte_auto_waarde.domain.comparables import (
     ComparableSelection,
     ScoredComparable,
 )
+from echte_auto_waarde.domain.evidence import describe_evidence
 from echte_auto_waarde.domain.valuation import ValuationResult
 from echte_auto_waarde.models.listing import Listing
 from echte_auto_waarde.models.option import VehicleOption
@@ -89,6 +90,20 @@ def to_comparable_read(
     )
 
 
+def evidence_disclaimer(listings: dict[int, Listing]) -> str:
+    """Say what this particular valuation rests on.
+
+    Derived from the listings behind it rather than assumed, so an imported
+    market is never described as a demo market or the other way round.
+    """
+    sources = {
+        listing.data_source.source_type
+        for listing in listings.values()
+        if listing.data_source is not None
+    }
+    return describe_evidence(sources)
+
+
 def to_valuation_read(
     session: Session,
     vehicle: Vehicle,
@@ -110,6 +125,7 @@ def to_valuation_read(
 
     return ValuationRead(
         id=valuation_id,
+        data_disclaimer=evidence_disclaimer(listings),
         sufficient_data=result.sufficient_data,
         algorithm_version=result.algorithm_version,
         vehicle=VehicleRead.from_vehicle(vehicle),
@@ -225,6 +241,7 @@ def stored_valuation_to_read(session: Session, valuation: Valuation) -> Valuatio
         )
 
     return ValuationRead(
+        data_disclaimer=evidence_disclaimer(listings),
         id=valuation.id,
         sufficient_data=True,
         algorithm_version=valuation.algorithm_version,

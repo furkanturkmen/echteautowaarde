@@ -178,6 +178,35 @@ key are needed, and nothing else in the application touches the network. See
 [`docs/data-sources.md`](docs/data-sources.md).
 
 
+### 6. Importing real market data (optional)
+
+The demo market is invented. Real asking prices enter through a CSV file that
+you are entitled to use — your own inventory, a licensed extract, an export you
+were given. Nothing is fetched and no marketplace is contacted.
+
+```powershell
+cd apps\api
+.\.venv\Scripts\python.exe -m echte_auto_waarde.import_market `
+  --file ..\..\docs\examples\market-import-example.csv `
+  --source-key import:dealer-example --scope bmw-3-serie --dry-run
+```
+
+Drop `--dry-run` to write it, and add `--mode full-snapshot` when the file is
+the complete picture of that scope. Then value real vehicles against it:
+
+```powershell
+$env:EAW_MARKET_MODE = "REAL"
+```
+
+In `REAL` mode a real vehicle is valued on imported evidence only; the demo
+examples keep using the demo market, and a shortage of real comparables is
+reported as insufficient data rather than filled with invented listings.
+
+**You are responsible for having the right to use any file you import.** A
+listing that stops appearing is recorded as removed, never as sold, and an
+asking price is never a sale price. See
+[`docs/data-sources.md`](docs/data-sources.md) for the column contract.
+
 ### Configuration
 
 Copy `.env.example` to `.env` (backend) and `apps/web/.env.example` to
@@ -239,7 +268,12 @@ CLAUDE.md    Authoritative project specification
 
 - Market data is synthetic; the valuation validates the methodology, not real
   Dutch market prices.
-- No marketplace data is collected. Commercial marketplaces are not scraped.
+- No marketplace data is collected. Commercial marketplaces are not scraped —
+  their terms forbid it, AutoScout24's robots.txt refuses this class of agent
+  outright, and CJEU C-202/12 concerned these exact Dutch car sites. Real data
+  enters by import instead.
+- Imported prices are observed asking prices. A removed listing is not a sale,
+  and no sale price is ever recorded or inferred.
 - Optional RDW enrichment covers vehicle specifications only — never prices.
 - Valuation adjustments are conservative documented heuristics, not a trained
   model.

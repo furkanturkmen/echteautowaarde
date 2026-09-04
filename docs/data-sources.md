@@ -189,10 +189,126 @@ a plate. Everything else — stored vehicles, the synthetic market, manual entry
 comparables, valuation, confidence, the local AI — works offline. Set
 `EAW_RDW_ENABLED=false` and the application never contacts anything at all.
 
+## CsvImportDataSource — real market evidence (implemented)
+
+The lawful route to real asking prices: someone entitled to a dataset hands it
+to the application as a file. No network, no marketplace, no third party.
+
+| | |
+|---|---|
+| Purpose | Observed asking prices for real vehicles, as market evidence |
+| Cost | €0 |
+| Access | `python -m echte_auto_waarde.import_market --file … --source-key … --scope …` |
+| Refresh | Whenever the operator imports a newer file |
+| Limitations | Quality and lawfulness are entirely the responsibility of whoever supplies the file |
+
+**Responsibility travels with the file.** The application cannot tell whether a
+row may lawfully be used and does not pretend to. Putting data in a CSV does not
+make it reusable; the person running the import is responsible for having that
+right. That is why the source key names the dataset — `import:dealer-example` —
+and never suggests the data came from Echte Auto Waarde.
+
+Only market-evidence fields are read. Seller names, telephone numbers and email
+addresses are not part of the contract: this product needs market evidence, not
+a contact database.
+
+### The CSV contract (version 1)
+
+UTF-8 (a BOM is tolerated), comma-delimited, one header row. A value containing
+a comma must be quoted, as in any CSV. Prices may be written `27500`, `27.500`,
+`"27500,50"` or `€ 27.500`; money becomes integer cents on the way in. Dates are
+`YYYY-MM-DD` or a full ISO-8601 timestamp, and a naive value is read as UTC.
+
+| Column | Required | Notes |
+|---|---|---|
+| `external_reference` | **yes** | Stable identity **within one source**. Never derived from price, mileage, row number or anything else that changes |
+| `make`, `model` | **yes** | Normalized by the existing layer |
+| `asking_price_eur` | **yes** | The asking price observed on `observed_at`. Never a sale price |
+| `observed_at` | **yes** | When this row was observed |
+| `listing_url`, `license_plate`, `variant`, `trim`, `registration_year`, `mileage_km`, `fuel`, `transmission`, `body_type`, `drivetrain`, `power_hp`, `seller_type`, `seller_city`, `options` | no | `options` is one cell separated by `;` |
+
+An unrecognised value normalizes to `UNKNOWN`, which lowers confidence. Nothing
+is guessed. A structurally invalid row rejects the **whole file**: validation
+runs to completion first, so a bad file leaves the database untouched and the
+operator gets row-numbered problems rather than a traceback.
+
+### Incremental and full snapshot
+
+`INCREMENTAL` (the default) adds and updates listings and appends observations.
+**It says nothing about what it does not contain**, so it never retires
+anything.
+
+`FULL_SNAPSHOT` additionally claims to be the complete picture of one source and
+one scope at one moment. Only when such a run reaches `COMPLETED` may listings
+of that same source *and* scope that are absent from it be marked `REMOVED`.
+
+**`REMOVED` means exactly one thing:** this listing was not observed in a
+completed full snapshot of this source and scope. It does **not** mean sold, the
+last asking price is **not** a sale price, and no sale price is ever recorded.
+`LIKELY_SOLD` remains unset by any code path.
+
+A rejected or failed import retires nothing — verified by tests, because the
+alternative is a bad file quietly emptying a market.
+
+### Scope is immutable
+
+Within one data source, **a listing keeps the scope it was first imported
+under.** A listing with no scope may adopt one once — which covers rows imported
+before scopes existed — and after that a file claiming the same
+`external_reference` under a different scope is rejected before anything is
+written.
+
+The reason is soundness of removal. If a listing could drift between scopes, a
+full snapshot of scope B could retire a listing that only ever belonged to scope
+A, or a listing could end up unreachable by any snapshot and never retire at
+all. Rejecting the file keeps both impossible.
+
+In practice: use stable source and scope definitions, and do not move the same
+external listing between scopes. If a future lawful source genuinely needs a
+listing to belong to several overlapping scopes, that needs a scope-membership
+model — one listing, many scopes, with removal scoped to one of them. That is
+deliberately not built here, and one nullable column is not a substitute for it.
+
+### Import runs
+
+Every import writes an `ImportRun`: source, scope, mode, status
+(`STARTED`/`COMPLETED`/`FAILED`), timings, and counts of listings seen, created,
+updated and removed. It makes imports auditable and it is what makes the removal
+rule safe.
+
 ## Marketplace data — not in the MVP
 
 Commercial marketplaces (Marktplaats, AutoScout24, Gaspedaal, AutoTrack, dealer
-sites) are **not** scraped. No adapter for them exists, and none is built
+sites) are **not** scraped. The research behind that decision is summarised
+below.
+
+### Why not, concretely
+
+- **AutoScout24's `robots.txt` names this class of agent and refuses it**:
+  `User-agent: ClaudeBot … Disallow: /`, alongside GPTBot, CCBot and others.
+- **Marktplaats' terms** forbid repeated and systematic re-utilisation of
+  substantial *and non-substantial* parts of its advertisement database, and
+  forbid copying platform content beyond an RSS feed for personal use.
+- **AutoTrack and Gaspedaal** disallow every query-string URL, which is every
+  search and filter page.
+- **There is direct EU precedent about these exact sites.** In CJEU C-202/12
+  *Innoweb v Wegener* (19 December 2013), a dedicated meta-search engine over
+  AutoTrack's car adverts was held to re-utilise the whole or a substantial part
+  of that database. "Aggregate Dutch car listings into your own interface" is
+  the shape of product that lost.
+
+None of the four offers an API for reading listings; the dealer APIs that exist
+are for *publishing* stock, not retrieving it.
+
+### Lawful routes that remain open
+
+- **A dealer feed with permission** — a dealer authorising their own inventory.
+- **A licensed data provider** — Autotelex, VWE, RDC, JATO and similar, under a
+  commercial contract.
+- **An official marketplace partnership.**
+
+All three land in the same CSV-shaped doorway that exists today. None of them is
+implemented, and none should be described as available. No adapter for them exists, and none is built
 without an explicit decision that has reviewed the legal, contractual and
 technical constraints first.
 

@@ -33,6 +33,7 @@ from echte_auto_waarde.domain.ai_context import (
     ConfidenceFactorContext,
     ValuationAiContext,
 )
+from echte_auto_waarde.domain.evidence import describe_evidence
 from echte_auto_waarde.models.enums import DataSourceType
 from echte_auto_waarde.models.listing import Listing
 from echte_auto_waarde.models.option import VehicleOption
@@ -172,10 +173,9 @@ def build_context(session: Session, valuation: Valuation) -> ValuationAiContext:
         # Whether the evidence is invented decides how the assistant may speak
         # about it, so it travels with the context rather than being assumed.
         data_is_synthetic=DataSourceType.SYNTHETIC in sources or not sources,
-        data_disclaimer=(
-            "Deze waardering is gebaseerd op een synthetische demomarkt en is niet "
-            "geschikt voor echte aankoopbeslissingen."
-        ),
+        # The same sentence the interface shows, derived from the same evidence,
+        # so the assistant and the page cannot disagree about provenance.
+        data_disclaimer=describe_evidence(sources),
     )
 
 

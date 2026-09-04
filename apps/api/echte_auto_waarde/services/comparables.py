@@ -11,6 +11,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
+from echte_auto_waarde.config import get_settings
 from echte_auto_waarde.domain.comparables import (
     DEFAULT_CRITERIA,
     ComparableCandidate,
@@ -18,11 +19,13 @@ from echte_auto_waarde.domain.comparables import (
     ComparableSelection,
     select_comparables,
 )
+from echte_auto_waarde.domain.evidence import evidence_source_types
 from echte_auto_waarde.domain.fingerprint import VehicleFingerprint
 from echte_auto_waarde.models.enums import ListingStatus
-from echte_auto_waarde.models.listing import Listing
+from echte_auto_waarde.models.listing import DataSource, Listing
 from echte_auto_waarde.models.option import VehicleOption
 from echte_auto_waarde.models.vehicle import Vehicle
+from echte_auto_waarde.services.vehicles import is_demo_vehicle
 
 # A removed listing is no longer an offer, so it cannot be current market
 # evidence. It stays in the database for historical analysis.
@@ -34,14 +37,27 @@ def load_candidates(
     target: Vehicle,
     exclude_vehicle_id: int | None = None,
 ) -> list[ComparableCandidate]:
-    """Load every listing on the same model line as the target vehicle."""
+    """Load every usable listing on the same model line as the target vehicle.
+
+    This is the single place the evidence policy is applied. A demo car is
+    compared with the demo market and a real car, in real-market mode, only with
+    real listings — a shortage of real evidence is never topped up with invented
+    listings. Everything downstream receives comparables without knowing which
+    adapter produced them.
+    """
+    allowed_sources = evidence_source_types(
+        get_settings().market_mode, target_is_demo=is_demo_vehicle(target)
+    )
+
     statement = (
         select(Listing)
         .join(Vehicle, Listing.vehicle_id == Vehicle.id)
+        .join(DataSource, Listing.data_source_id == DataSource.id)
         .where(
             Vehicle.make == target.make,
             Vehicle.model == target.model,
             Listing.status.not_in(EXCLUDED_STATUSES),
+            DataSource.source_type.in_(allowed_sources),
         )
         .options(
             joinedload(Listing.vehicle)

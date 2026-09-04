@@ -72,6 +72,26 @@ class DataSourceType(StrEnum):
     MANUAL = "MANUAL"
 
 
+class ImportMode(StrEnum):
+    """How an import file relates to the market it describes.
+
+    The distinction exists for one reason: only a file that claims to be the
+    complete picture of a scope can say anything about what is *absent* from it.
+    """
+
+    # A file of listings to add or refresh. Says nothing about what is missing.
+    INCREMENTAL = "INCREMENTAL"
+    # The complete set of listings for one source and scope at one moment. What
+    # is absent from a successfully completed one is no longer being offered.
+    FULL_SNAPSHOT = "FULL_SNAPSHOT"
+
+
+class ImportRunStatus(StrEnum):
+    STARTED = "STARTED"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
 class OptionCategory(StrEnum):
     """Grouping used for display and for option-importance configuration."""
 

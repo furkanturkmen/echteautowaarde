@@ -13,6 +13,7 @@ from typing import Any
 from pydantic import Field
 
 from echte_auto_waarde.domain.deals import DealClassification
+from echte_auto_waarde.domain.evidence import SYNTHETIC_DISCLAIMER
 from echte_auto_waarde.schemas.common import ApiModel
 from echte_auto_waarde.schemas.vehicle import ManualVehicleCreate, VehicleRead
 
@@ -123,11 +124,9 @@ class ValuationRead(ApiModel):
     comparables: list[ComparableRead] = Field(default_factory=list)
 
     insufficient_data_reason: str | None = None
-    # Every MVP valuation rests on fictional listings; the interface must say so.
-    data_disclaimer: str = (
-        "Deze waardering is gebaseerd op een synthetische demomarkt en is niet "
-        "geschikt voor echte aankoopbeslissingen."
-    )
+    # Describes the evidence this valuation actually used — demo market,
+    # imported market data, or both — so provenance is never assumed.
+    data_disclaimer: str = SYNTHETIC_DISCLAIMER
 
 
 class ComparableSearchRead(ApiModel):

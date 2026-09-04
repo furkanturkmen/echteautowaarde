@@ -9,11 +9,14 @@ from echte_auto_waarde.models.enums import (
     DataSourceType,
     Drivetrain,
     FuelType,
+    ImportMode,
+    ImportRunStatus,
     ListingStatus,
     OptionCategory,
     SellerType,
     Transmission,
 )
+from echte_auto_waarde.models.import_run import ImportRun
 from echte_auto_waarde.models.listing import (
     DataSource,
     Listing,
@@ -31,6 +34,9 @@ __all__ = [
     "DataSourceType",
     "Drivetrain",
     "FuelType",
+    "ImportMode",
+    "ImportRun",
+    "ImportRunStatus",
     "Listing",
     "ListingSnapshot",
     "ListingStatus",

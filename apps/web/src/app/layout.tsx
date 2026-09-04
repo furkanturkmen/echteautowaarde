@@ -63,10 +63,12 @@ export default function RootLayout({
         <footer className="mt-20 border-t border-line bg-surface">
           <div className="mx-auto max-w-6xl px-5 py-8 text-sm text-muted sm:px-8">
             <BrandLockup withPayoff />
+            {/* Standaard is de markt verzonnen. Zodra er echte marktgegevens zijn
+                geïmporteerd, vertelt elke waardering zelf waarop hij is gebaseerd. */}
             <p className="mt-4 max-w-2xl">
-              Deze lokale versie werkt met een synthetische demomarkt: de advertenties,
-              verkopers en prijzen zijn verzonnen voor ontwikkeling en test. Gebruik de
-              uitkomsten niet voor echte aankoopbeslissingen.
+              Deze lokale versie werkt standaard met een synthetische demomarkt: de
+              advertenties, verkopers en prijzen zijn verzonnen voor ontwikkeling en test.
+              Bij elke waardering staat waarop die is gebaseerd.
             </p>
           </div>
         </footer>

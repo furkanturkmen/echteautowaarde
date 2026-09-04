@@ -1,0 +1,4 @@
+external_reference,listing_url,make,model,variant,trim,registration_year,mileage_km,asking_price_eur,fuel,transmission,body_type,power_hp,seller_type,seller_city,options,observed_at
+EXAMPLE-0001,,BMW,3 Serie,330e,M Sport,2020,68500,27.950,Plug-in hybride,Automaat,Sedan,292,DEALER,Voorbeeldstad,Panoramadak;Adaptieve cruise control,2026-09-01
+EXAMPLE-0002,,BMW,3 Serie,330e,Business Edition,2019,94200,24.500,Plug-in hybride,Automaat,Sedan,292,PRIVATE,Voorbeeldstad,Stoelverwarming,2026-09-01
+EXAMPLE-0003,,BMW,3 Serie,320i,M Sport,2021,41000,31.750,Benzine,Automaat,Sedan,184,DEALER,Voorbeeldstad,Navigatie;Achteruitrijcamera,2026-09-01

@@ -68,6 +68,9 @@ class Listing(Base, TimestampMixin):
 
     # Identifier used by the originating source; unique within that source.
     external_reference: Mapped[str] = mapped_column(String(96), index=True)
+    # Which slice of a source this listing was imported as part of. Only a
+    # completed full snapshot of the same source and scope may retire it.
+    source_scope: Mapped[str | None] = mapped_column(String(96), index=True)
 
     asking_price_cents: Mapped[int] = mapped_column(Integer, index=True)
     url: Mapped[str | None] = mapped_column(String(512))

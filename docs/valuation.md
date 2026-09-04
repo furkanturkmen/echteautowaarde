@@ -9,6 +9,30 @@ configuration dataclass in the domain layer — `SimilarityWeights`,
 `ComparableCriteria`, `ValuationConfig`, `DealThresholds` — and can be replaced
 per search or per request.*
 
+
+## Which evidence a valuation may use
+
+Before any of the methodology below runs, the comparable query decides what
+counts as evidence at all. The rule lives in one function
+(`domain/evidence.py`) and is applied in one place (`load_candidates`), so the
+valuation engine receives comparables without knowing which adapter produced
+them.
+
+| Market mode | Target vehicle | Evidence used |
+|---|---|---|
+| `DEMO` (default) | anything | the synthetic demo market |
+| `REAL` | a demo vehicle | the synthetic demo market |
+| `REAL` | a real vehicle (manual, register-enriched, imported) | **imported and other real sources only** |
+
+A demo car is valued against the demo market because it is a fictional car. A
+real car in real-market mode is never valued against invented listings, and a
+shortage of real comparables is **never** topped up with demo data: the honest
+answer is the existing insufficient-data result, with its confidence and its
+explanation.
+
+Every valuation reports what it actually rested on, derived from the listings
+behind it rather than assumed.
+
 ## Pipeline
 
 ```

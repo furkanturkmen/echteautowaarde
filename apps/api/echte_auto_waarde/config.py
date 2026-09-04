@@ -12,6 +12,8 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from echte_auto_waarde.domain.evidence import MarketMode
+
 # apps/api/echte_auto_waarde/config.py -> repository root is three levels up.
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -28,6 +30,11 @@ class Settings(BaseSettings):
 
     # Database — SQLite file inside the repository's data/ directory.
     database_path: Path = REPO_ROOT / "data" / "automotive.db"
+
+    # Which market valuations are about. DEMO is what a fresh install contains;
+    # switch to REAL after importing market data you are entitled to use, and
+    # real vehicles are then valued against that data alone.
+    market_mode: MarketMode = MarketMode.DEMO
 
     # Frontend origins allowed to call this API during local development.
     cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
