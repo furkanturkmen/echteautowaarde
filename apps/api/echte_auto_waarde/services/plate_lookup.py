@@ -56,14 +56,6 @@ class PlateLookupResult:
     # Fields enrichment actually filled, for provenance and for the report.
     enriched_fields: list[str] = field(default_factory=list)
 
-    @property
-    def source_key(self) -> str | None:
-        if self.status is PlateLookupStatus.ENRICHED:
-            return RDW_SOURCE_KEY
-        if self.status is PlateLookupStatus.LOCAL:
-            return "local"
-        return None
-
 
 def ensure_register_data_source(session: Session) -> DataSource:
     """The provenance row for register-sourced specifications.

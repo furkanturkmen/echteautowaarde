@@ -52,9 +52,26 @@ def _check_ai() -> ComponentStatus:
         return ComponentStatus(name="ai", available=False, detail="Ollama not reachable")
 
 
+def _check_enrichment() -> ComponentStatus:
+    """Report the plate-enrichment switch, without using it.
+
+    Deliberately no request: this is the only outbound call the application can
+    make, and a health check is not a reason to reach the network — least of all
+    on an endpoint something might poll.
+    """
+    settings = get_settings()
+    if not settings.rdw_enabled:
+        return ComponentStatus(
+            name="plate_enrichment", available=False, detail="disabled by configuration"
+        )
+    return ComponentStatus(
+        name="plate_enrichment", available=True, detail=f"enabled ({settings.rdw_base_url})"
+    )
+
+
 @router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    components = [_check_database(), _check_ai()]
+    components = [_check_database(), _check_ai(), _check_enrichment()]
     database_ok = components[0].available
     return HealthResponse(
         status="ok" if database_ok else "degraded",

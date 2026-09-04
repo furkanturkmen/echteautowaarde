@@ -44,11 +44,6 @@ def normalize_license_plate(value: str | None) -> str | None:
     return plate or None
 
 
-def format_license_plate(plate: str | None) -> str | None:
-    """Return the stored plate as-is; Dutch sidecode formatting is a UI concern."""
-    return plate
-
-
 # --- Make ------------------------------------------------------------------
 
 _MAKE_ALIASES: dict[str, str] = {

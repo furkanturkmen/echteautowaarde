@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import UTC
 from itertools import zip_longest
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import distinct, func, select
@@ -25,6 +26,10 @@ from echte_auto_waarde.schemas.valuation import (
 )
 
 router = APIRouter(tags=["market"])
+
+NOT_FOUND: dict[int | str, dict[str, Any]] = {
+    404: {"description": "No such listing in the local dataset."}
+}
 
 
 def _get_listing(session: Session, listing_id: int) -> Listing:
@@ -51,12 +56,14 @@ def _get_listing(session: Session, listing_id: int) -> Listing:
     return listing
 
 
-@router.get("/listings/{listing_id}", response_model=ListingRead)
+@router.get("/listings/{listing_id}", response_model=ListingRead, responses=NOT_FOUND)
 def get_listing(listing_id: int, session: Session = Depends(get_session)) -> ListingRead:
     return to_listing_read(_get_listing(session, listing_id))
 
 
-@router.get("/listings/{listing_id}/history", response_model=ListingHistoryRead)
+@router.get(
+    "/listings/{listing_id}/history", response_model=ListingHistoryRead, responses=NOT_FOUND
+)
 def get_listing_history(
     listing_id: int, session: Session = Depends(get_session)
 ) -> ListingHistoryRead:

@@ -16,7 +16,13 @@ import {
   fetchExamples,
   lookupPlate,
 } from "@/lib/api";
-import { formatMoney, formatPlate, normalizePlate, parseEuroInput } from "@/lib/format";
+import {
+  formatAmount,
+  formatMoney,
+  formatPlate,
+  normalizePlate,
+  parseEuroInput,
+} from "@/lib/format";
 import { storePrefill } from "@/lib/prefill";
 
 /**
@@ -245,8 +251,10 @@ export function PlateSearchForm() {
                   type="button"
                   onClick={() => {
                     setDemoVehicleId(example.vehicleId);
-                    setPlate(example.licensePlate ?? "");
-                    setPrice(String(Math.round(example.askingPriceCents / 100)));
+                    // Written the way the field itself writes them, so choosing
+                    // an example looks like typing one.
+                    setPlate(formatPlate(example.licensePlate ?? "") ?? "");
+                    setPrice(formatAmount(example.askingPriceCents));
                     reset();
                   }}
                   className="rounded-eaw border border-line bg-surface px-3 py-2 text-left text-sm transition-colors hover:border-line-strong hover:bg-surface-muted"

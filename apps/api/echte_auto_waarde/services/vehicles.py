@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.orm import Session, selectinload
 
 from echte_auto_waarde.data_sources.base import RawVehicle
 from echte_auto_waarde.domain import normalization
@@ -137,15 +137,3 @@ def create_manual_vehicle(session: Session, raw: RawVehicle) -> Vehicle:
     session.flush()
     session.refresh(vehicle)
     return vehicle
-
-
-def load_vehicle_with_options(session: Session, vehicle_id: int) -> Vehicle | None:
-    return (
-        session.scalars(
-            select(Vehicle)
-            .where(Vehicle.id == vehicle_id)
-            .options(joinedload(Vehicle.options).joinedload(VehicleOption.definition))
-        )
-        .unique()
-        .one_or_none()
-    )

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -20,8 +22,14 @@ from echte_auto_waarde.services.plate_lookup import PlateLookupStatus
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
 
+# Every lookup here can miss, and a client reading the schema should see that
+# rather than discovering it at runtime.
+NOT_FOUND: dict[int | str, dict[str, Any]] = {
+    404: {"description": "No such resource in the local dataset."}
+}
 
-@router.get("/{vehicle_id}", response_model=VehicleRead)
+
+@router.get("/{vehicle_id}", response_model=VehicleRead, responses=NOT_FOUND)
 def get_vehicle(vehicle_id: int, session: Session = Depends(get_session)) -> VehicleRead:
     vehicle = vehicle_service.get_vehicle(session, vehicle_id)
     if vehicle is None:
@@ -31,7 +39,7 @@ def get_vehicle(vehicle_id: int, session: Session = Depends(get_session)) -> Veh
     return VehicleRead.from_vehicle(vehicle)
 
 
-@router.get("/plate/{plate}", response_model=VehicleRead)
+@router.get("/plate/{plate}", response_model=VehicleRead, responses=NOT_FOUND)
 def get_vehicle_by_plate(plate: str, session: Session = Depends(get_session)) -> VehicleRead:
     """Look up a plate in the local dataset.
 

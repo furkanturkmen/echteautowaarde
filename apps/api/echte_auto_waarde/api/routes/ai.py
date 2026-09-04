@@ -6,6 +6,8 @@ sees anything the server did not load from the database itself.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -21,6 +23,10 @@ from echte_auto_waarde.services.ai import answer_question, build_context, load_v
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
+# An unavailable model is a 200 with available=false; only a missing
+# valuation is an error here.
+NOT_FOUND: dict[int | str, dict[str, Any]] = {404: {"description": "No such valuation."}}
+
 
 def _require_valuation(session: Session, valuation_id: int):
     valuation = load_valuation_for_ai(session, valuation_id)
@@ -32,7 +38,7 @@ def _require_valuation(session: Session, valuation_id: int):
     return valuation
 
 
-@router.post("/chat", response_model=AiChatRead)
+@router.post("/chat", response_model=AiChatRead, responses=NOT_FOUND)
 def chat(
     request: AiChatRequest,
     session: Session = Depends(get_session),
@@ -57,7 +63,11 @@ def chat(
     )
 
 
-@router.get("/valuations/{valuation_id}/suggestions", response_model=AiSuggestionsRead)
+@router.get(
+    "/valuations/{valuation_id}/suggestions",
+    response_model=AiSuggestionsRead,
+    responses=NOT_FOUND,
+)
 def suggestions(
     valuation_id: int,
     session: Session = Depends(get_session),

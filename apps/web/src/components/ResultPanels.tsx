@@ -67,9 +67,11 @@ export function ErrorPanel({
               : "De waardering is niet gelukt"}
       </h2>
       <p className="mt-3 text-muted">
-        {notFound && !unknownPlate
-          ? "De link verwijst naar een waardering die niet in de lokale database staat. Waardeer de auto opnieuw om een nieuw resultaat te krijgen."
-          : error.message}
+        {unknownPlate
+          ? "We kennen dit kenteken niet in de lokale gegevens."
+          : notFound
+            ? "De link verwijst naar een waardering die niet in de lokale database staat. Waardeer de auto opnieuw om een nieuw resultaat te krijgen."
+            : error.message}
       </p>
 
       {notFound && !unknownPlate ? (

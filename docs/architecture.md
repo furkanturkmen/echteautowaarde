@@ -81,6 +81,14 @@ Dutch open vehicle register for specifications. It is behind
 degrades to the manual route. Everything else — comparables, valuation,
 confidence, the local AI — runs without a network. Ollama is local.
 
+## Local workflow
+
+`scripts/setup.ps1` prepares a machine, `scripts/dev-api.ps1` and
+`scripts/dev-web.ps1` run the two processes, and `scripts/verify.ps1` runs the
+checks that must pass before a commit: ruff, ruff format, mypy and pytest on the
+backend, then lint, `tsc --noEmit` and a production build on the frontend. There
+is no CI; these run locally.
+
 ## What is deliberately absent
 
 Microservices, Kubernetes, Redis, Celery, hosted search, vector databases,

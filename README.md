@@ -100,6 +100,11 @@ database, no authentication, no CI. See [`docs/architecture.md`](docs/architectu
 All commands below are written for Windows PowerShell; they work unchanged in
 bash apart from the virtual-environment activation path.
 
+In a hurry: `scripts\setup.ps1` does everything in this section (virtual
+environment, dependencies, migrations, demo data, `npm install`), and
+`scripts\dev-api.ps1` / `scripts\dev-web.ps1` start the two processes. The steps
+below are what those scripts run, one at a time.
+
 ### 1. Backend
 
 ```powershell
@@ -157,6 +162,22 @@ result page shows a short note in place of the question box. See
 [`docs/local-ai.md`](docs/local-ai.md) for the grounding rules and the numeric
 check that verifies every amount an answer mentions.
 
+### 5. Plate enrichment (optional)
+
+A Dutch plate can be enriched from the open vehicle register. It is **off by
+default**, because it is the only outbound call the application can make:
+
+```powershell
+$env:EAW_RDW_ENABLED = "true"      # or put EAW_RDW_ENABLED=true in .env
+```
+
+With it on, an unknown plate is looked up and the manual form opens prefilled
+with what the register knows. With it off, unreachable, or given a plate that is
+not a passenger car, the manual route works exactly as before. No account and no
+key are needed, and nothing else in the application touches the network. See
+[`docs/data-sources.md`](docs/data-sources.md).
+
+
 ### Configuration
 
 Copy `.env.example` to `.env` (backend) and `apps/web/.env.example` to
@@ -166,16 +187,15 @@ both files are optional.
 
 ## Testing
 
+`scripts\verify.ps1` runs every check below in one go. Individually:
+
 ```powershell
 cd apps\api
+.\.venv\Scripts\ruff.exe check .
+.\.venv\Scripts\ruff.exe format --check .
+.\.venv\Scripts\python.exe -m mypy echte_auto_waarde
 .\.venv\Scripts\python.exe -m pytest
 ```
-
-Backend tests run offline and cover normalization, comparable selection,
-similarity, valuation adjustments, deal classification and confidence as those
-parts land.
-
-Frontend checks:
 
 ```powershell
 cd apps\web
@@ -184,6 +204,17 @@ npx tsc --noEmit
 npm run build
 ```
 
+The backend suite runs entirely offline against an in-memory database: no test
+needs Ollama, the vehicle register, or an internet connection. It covers
+normalization and the option taxonomy, comparable filtering, similarity and
+widening, valuation adjustments, outlier handling, deal classification,
+confidence, the API contract, plate enrichment, and the AI layer's degraded
+modes and grounding check.
+
+The frontend has no test runner; adding one would mean a new dependency, so its
+logic is covered through the API and by the type checker instead.
+
+
 ## Project structure
 
 ```
@@ -191,7 +222,7 @@ apps/api     FastAPI backend (domain, valuation engine, API)
 apps/web     Next.js frontend
 data/        Local SQLite database and development data (not committed)
 docs/        Product, architecture, data model, valuation and data-source docs
-scripts/     Local helper scripts
+scripts/     Local helper scripts (setup, dev servers, verification)
 CLAUDE.md    Authoritative project specification
 ```
 
@@ -212,3 +243,10 @@ CLAUDE.md    Authoritative project specification
 - Optional RDW enrichment covers vehicle specifications only — never prices.
 - Valuation adjustments are conservative documented heuristics, not a trained
   model.
+- The AI explains a finished valuation and never produces one. Its numeric
+  check verifies that every euro amount came from the engine; it does not
+  fact-check the reasoning around those amounts.
+- Listings that disappear are never treated as sold. `LIKELY_SOLD` exists in the
+  model and no heuristic sets it.
+- No authentication, accounts, payments, analytics or telemetry exist, and no
+  cloud service is required to run any part of this.

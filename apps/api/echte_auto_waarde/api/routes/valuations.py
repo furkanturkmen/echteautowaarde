@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -18,8 +20,14 @@ from echte_auto_waarde.services.valuation import store_valuation, valuate_vehicl
 
 router = APIRouter(prefix="/valuations", tags=["valuations"])
 
+# A valuation can be requested for a vehicle or plate that does not exist,
+# and a stored valuation can be asked for by an id that never existed.
+NOT_FOUND: dict[int | str, dict[str, Any]] = {
+    404: {"description": "No such vehicle, plate or valuation."}
+}
 
-@router.post("", response_model=ValuationRead)
+
+@router.post("", response_model=ValuationRead, responses=NOT_FOUND)
 def create_valuation(
     request: ValuationRequest, session: Session = Depends(get_session)
 ) -> ValuationRead:
@@ -45,7 +53,7 @@ def create_valuation(
     return response
 
 
-@router.get("/{valuation_id}", response_model=ValuationRead)
+@router.get("/{valuation_id}", response_model=ValuationRead, responses=NOT_FOUND)
 def get_valuation(valuation_id: int, session: Session = Depends(get_session)) -> ValuationRead:
     """Return a stored valuation with the evidence it was based on."""
     valuation = (

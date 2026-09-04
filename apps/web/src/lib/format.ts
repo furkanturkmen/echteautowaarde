@@ -30,6 +30,12 @@ export function formatMoney(cents: number | null | undefined): string {
   return euro.format(Math.round(cents / 100));
 }
 
+/** A euro amount without its symbol, for inputs that render their own. */
+export function formatAmount(cents: number | null | undefined): string {
+  if (cents === null || cents === undefined) return "";
+  return decimal.format(Math.round(cents / 100));
+}
+
 export function formatMoneyDelta(cents: number | null | undefined): string {
   if (cents === null || cents === undefined) return "—";
   return euroSigned.format(Math.round(cents / 100));
@@ -51,9 +57,6 @@ export function formatDate(value: string | null | undefined): string {
   return Number.isNaN(parsed.getTime()) ? "—" : dateFormat.format(parsed);
 }
 
-export function formatYear(year: number | null | undefined): string {
-  return year ? String(year) : "—";
-}
 
 /** Strip a plate to storage form: uppercase, no separators. */
 export function normalizePlate(value: string): string {

@@ -180,11 +180,17 @@ export interface ValuationRequest {
   askingPriceCents?: number;
 }
 
-/** An error the interface can act on: unknown plate, thin data, backend down. */
+/** An error the interface can act on: unknown plate, thin data, backend down.
+ *
+ * `message` is always Dutch and safe to show a consumer. The backend's own
+ * detail is English by convention — it is written for developers — so it is
+ * kept separately in `detail` and never rendered.
+ */
 export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly detail?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -212,26 +218,39 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new ApiError(await readErrorDetail(response), response.status);
+    throw new ApiError(
+      messageForStatus(response.status),
+      response.status,
+      await readErrorDetail(response),
+    );
   }
 
   return (await response.json()) as T;
 }
 
-async function readErrorDetail(response: Response): Promise<string> {
+/** Dutch wording for a failed request. The consumer interface is Dutch. */
+function messageForStatus(status: number): string {
+  if (status === 404) {
+    return "We konden dit niet terugvinden in de lokale gegevens.";
+  }
+  if (status === 422) {
+    // FastAPI validation errors arrive as a list of field problems.
+    return "De ingevoerde gegevens zijn niet geldig. Controleer de velden.";
+  }
+  return `De aanvraag is mislukt (${status}).`;
+}
+
+/** The backend's own English explanation, kept for developers only. */
+async function readErrorDetail(response: Response): Promise<string | undefined> {
   try {
     const body = (await response.json()) as { detail?: unknown };
     if (typeof body.detail === "string") {
       return body.detail;
     }
-    if (Array.isArray(body.detail)) {
-      // FastAPI validation errors arrive as a list of field problems.
-      return "De ingevoerde gegevens zijn niet geldig. Controleer de velden.";
-    }
   } catch {
-    // Fall through to the generic message below.
+    // A body that is not JSON tells us nothing worth keeping.
   }
-  return `De aanvraag is mislukt (${response.status}).`;
+  return undefined;
 }
 
 export function createValuation(payload: ValuationRequest): Promise<Valuation> {

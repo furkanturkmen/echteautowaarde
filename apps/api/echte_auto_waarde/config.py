@@ -25,8 +25,6 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "Echte Auto Waarde API"
-    environment: str = "local"
-    debug: bool = True
 
     # Database — SQLite file inside the repository's data/ directory.
     database_path: Path = REPO_ROOT / "data" / "automotive.db"
